@@ -95,7 +95,7 @@ uint8_t syncFlag;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define VERSION_HI 0
-#define VERSION_LO 86
+#define VERSION_LO 88
 
 #define PIN_RESET 9
 
@@ -189,7 +189,9 @@ void blink() {
   for (int i = 0; i < 8 * num_led_per_output; i++) {
     LEDS.setPixel(i, 0xFFFFFFFF); //set full white
   }
+
   LEDS.show();
+
   delay(300);
   for (int i = 0; i <  8 * num_led_per_output; i++) {
     LEDS.setPixel(i, 0x00000000); //set 0
@@ -339,19 +341,22 @@ void loop() {
     beam_break_stat = digitalRead(beam_break_pin);
     //char addr[15];
     //oscAddr.toCharArray(addr, 15);
-    char oscStr[23] = {0x2f, 0x42, 0x65, 0x61, 0x6d, 0x42, 0x72, 0x65, 0x61, 0x6b, 0x2f, 0x30, 0x30, 0x30, 0x00, 0x00, 0x2c, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00};
+    char oscStr[23] = {0x2f, 0x42, 0x65, 0x61, 0x6d, 0x42, 0x72, 0x65, 0x61, 0x6b, 0x2f, 0x30, 0x30, 0x30, 0x30, 0x00, 0x2c, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     char dig3;
     char dig2;
     char dig1;
+    char dig0;
     int addrINT = node.getStartAddress();
-    dig3 = addrINT/100;
-    dig2 = (addrINT-(dig3*100))/10;
-    dig1 = addrINT-(dig3*100)-(dig2*10);
+    dig3 = addrINT/1000;
+    dig2 = (addrINT-(dig3*1000))/100;
+    dig1 = (addrINT-(dig3*1000)-(dig2*100))/10;
+    dig0 = addrINT-(dig3*1000)-(dig2*100)-(dig1*10);
 
     oscStr[11] = dig3 + 0x30;
     oscStr[12] = dig2 + 0x30;
     oscStr[13] = dig1 + 0x30;
+    oscStr[14] = dig0 + 0x30;
     //memcpy(&oscStr+11, addrCHAR, 3);
     udp.beginPacket(IPAddress(2, 0, 0, 1), OSCoutPort);
     udp.write(oscStr, 23);
@@ -400,9 +405,9 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                if(port >=6 ){
+                if(port >5 ){
                   port += 3;
-                  if(port >=14 ) {
+                  if(port >14 ) {
                     port +=3;
                   }
                 }
