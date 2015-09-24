@@ -69,7 +69,6 @@ void loop() {
 
           // Poll packet. Send poll reply.
           case OpPoll:
-            //udp.read(buffer, min(udp.available(), (int)sizeof(buffer)));
             node.createPollReply();
             artnetSend(buffer, sizeof(ArtPollReply));
             break;
@@ -101,7 +100,6 @@ void loop() {
 
           // IpProg packet
           case OpIpProg:
-            //udp.read(buffer, min(udp.available(), (int)sizeof(buffer)));
             node.createIpProgReply();
             artnetSend(buffer, sizeof(ArtIpProgReply));
             break;
