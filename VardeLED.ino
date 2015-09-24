@@ -1,22 +1,17 @@
+#include "FastLED.h"
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
-#include <FastLED.h>
 
-#pragma pack(1)
-
+#define NUM_RGBW  144
+#define NUM_RGB   (NUM_RGBW/4*3)
 #define PIN_RESET 9
 
 EthernetUDP udp;
 byte buffer[600];
 
-byte pixels1[144*2*4];
-byte pixels2[144*2*4];
-
-WS2811Controller800Khz<5, RGB> port1;
-//WS2811Controller800Khz<5, RGB> port2;
-//WS2811Controller800Khz<5, RGB> port3;
-//WS2811Controller800Khz<5, RGB> port4;
+CRGB leds1[NUM_RGB];
+CRGB leds2[NUM_RGB];
 
 ////////////////////////////////////////////////////////////
 ArtConfig config = {
@@ -38,8 +33,6 @@ ArtNode node = ArtNode(config, sizeof(buffer), buffer);
 ////////////////////////////////////////////////////////////
 void setup() {
 
-  delay(100);
-
 #ifdef PIN_RESET
   pinMode(PIN_RESET, OUTPUT);
   digitalWrite(PIN_RESET, LOW);
@@ -51,7 +44,8 @@ void setup() {
   Ethernet.begin(config.mac, config.ip);
   udp.begin(config.udpPort);
 
-  port1.init();
+  FastLED.addLeds<WS2812, 5, RGB>(leds1, NUM_RGB);
+  FastLED.addLeds<WS2812, 21, RGB>(leds2, NUM_RGB);
 }
 
 ////////////////////////////////////////////////////////////
@@ -67,33 +61,39 @@ void loop() {
       // Check packet ID
       if (memcmp(header->ID, "Art-Net", 8) == 0) {
 
+        // Read the rest of the packet
+        udp.read(buffer+sizeof(ArtHeader), udp.available());
+
         // Package Op-Code determines type of packet
         switch(header->OpCode) {
 
           // Poll packet. Send poll reply.
           case OpPoll:
-            udp.read(buffer, min(udp.available(), (int)sizeof(buffer)));
+            //udp.read(buffer, min(udp.available(), (int)sizeof(buffer)));
             node.createPollReply();
             artnetSend(buffer, sizeof(ArtPollReply));
             break;
 
           // DMX packet
           case OpDmx: {
-            udp.read(buffer, min(sizeof(ArtDmx), sizeof(buffer)));
             ArtDmx* dmx = (ArtDmx*)buffer;
             int port = node.getPort(dmx->SubUni, dmx->Net);
             switch (port) {
               case 0:
-                mergeRGBtoRGBW(dmx->Data, pixels1, 144);
-                port1.show((CRGB*)pixels1, 196, 255);
+                mergeRGBtoRGBW(dmx->Data, (byte*)leds1, NUM_RGBW);
+                FastLED[0].show(leds1, NUM_RGB, 255);
                 break;
               case 1:
-                mergeWtoRGBW(dmx->Data, pixels1, 144);
-                port1.show((CRGB*)pixels1, 170, 255);
+                mergeWtoRGBW(dmx->Data, (byte*)leds1, NUM_RGBW);
+                FastLED[0].show(leds1, NUM_RGB, 255);
                 break;
               case 2:
+                mergeRGBtoRGBW(dmx->Data, (byte*)leds2, NUM_RGBW);
+                FastLED[1].show(leds2, NUM_RGB, 255);
                 break;
               case 3:
+                mergeWtoRGBW(dmx->Data, (byte*)leds2, NUM_RGBW);
+                FastLED[1].show(leds2, NUM_RGB, 255);
                 break;
             }
           }
@@ -101,14 +101,14 @@ void loop() {
 
           // IpProg packet
           case OpIpProg:
-            udp.read(buffer, min(udp.available(), (int)sizeof(buffer)));
+            //udp.read(buffer, min(udp.available(), (int)sizeof(buffer)));
             node.createIpProgReply();
             artnetSend(buffer, sizeof(ArtIpProgReply));
             break;
 
           // Unhandled packet
           default:
-            udp.read(buffer, min(udp.available(), (int)sizeof(buffer)));
+            break;
         }
       }
     }
@@ -126,9 +126,9 @@ void artnetSend(byte* buffer, int length) {
 ////////////////////////////////////////////////////////////
 void mergeRGBtoRGBW(uint8_t* rgb, uint8_t* rgbw, int n) {
   for (int i=0; i<n; i++) {
-    rgbw[1] = rgb[0];
-    rgbw[0] = rgb[1];
-    rgbw[2] = rgb[2];
+    rgbw[1] = rgb[2];
+    rgbw[0] = rgb[0];
+    rgbw[2] = rgb[1];
     rgb += 3;
     rgbw += 4;
   }
