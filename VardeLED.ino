@@ -13,7 +13,7 @@
 #define RGB_PER_UNIVERSE    RGBW_PER_UNIVERSE*4.0/3.0
 
 #define NUM_RGB_LEDS_4      (int)ceil(RGB_PER_UNIVERSE * 4)
-#define NUM_RGB_LEDS_3      (int)ceil(RGB_PER_UNIVERSE * 3)
+#define NUM_RGB_LEDS_3      287 //(int)ceil(RGB_PER_UNIVERSE * 3) 
 #define NUM_RGB_LEDS_2      (int)ceil(RGB_PER_UNIVERSE * 2)
 #define NUM_RGB_LEDS_1      (int)ceil(RGB_PER_UNIVERSE)
 
