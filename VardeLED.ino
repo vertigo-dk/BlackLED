@@ -13,7 +13,8 @@
 #define RGB_PER_UNIVERSE    RGBW_PER_UNIVERSE*4.0/3.0
 
 #define NUM_RGB_LEDS_4      (int)ceil(RGB_PER_UNIVERSE * 4)
-#define NUM_RGB_LEDS_3      287 //(int)ceil(RGB_PER_UNIVERSE * 3) 
+//#define NUM_RGB_LEDS_3    (int)ceil(RGB_PER_UNIVERSE * 3) 
+#define NUM_RGB_LEDS_3      287 // We never use 3 full universes, so cap the length for better performance
 #define NUM_RGB_LEDS_2      (int)ceil(RGB_PER_UNIVERSE * 2)
 #define NUM_RGB_LEDS_1      (int)ceil(RGB_PER_UNIVERSE)
 
@@ -36,10 +37,10 @@ EthernetUDP udp;
 byte udp_buffer[600];
 
 CRGB led_data[NUM_RGB_LEDS_4];
-byte * led_pointer_1 = (byte*)led_data;
-byte * led_pointer_2 = (byte*)led_data + RGBW_PER_UNIVERSE * 4;
-byte * led_pointer_3 = (byte*)led_data + 2*RGBW_PER_UNIVERSE * 4;
-byte * led_pointer_4 = (byte*)led_data + 3*RGBW_PER_UNIVERSE * 4;
+byte * led_data_ptr_1 = (byte*)led_data;
+byte * led_data_ptr_2 = (byte*)led_data + RGBW_PER_UNIVERSE * 4;
+byte * led_data_ptr_3 = (byte*)led_data + 2*RGBW_PER_UNIVERSE * 4;
+byte * led_data_ptr_4 = (byte*)led_data + 3*RGBW_PER_UNIVERSE * 4;
 
 bool locateMode = false;
 
@@ -106,6 +107,7 @@ void setup() {
   // Open ArtNet
   node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
 
+  // Create 4 outputs with different lengths (can be tweaked)
   FastLED.addLeds<WS2812, PIN_LED_1, RGB>(led_data, NUM_RGB_LEDS_3);
   FastLED.addLeds<WS2812, PIN_LED_2, RGB>(led_data, NUM_RGB_LEDS_3);
   FastLED.addLeds<WS2812, PIN_LED_3, RGB>(led_data, NUM_RGB_LEDS_2);
@@ -146,39 +148,41 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getPort(dmx->SubUni, dmx->Net);
               if (!locateMode && port >= 0 && port < 4) {
-                // Bit swap length from dmx packet
-                int l = ((dmx->Length & 0xF) << 8) + ((dmx->Length & 0xF0) >> 8);
+                // Calculate length of DMX packet. Requires bit swap length from dmx packet
+                int dmx_length = ((dmx->Length & 0xF) << 8) + ((dmx->Length & 0xF0) >> 8);
 
                 // Check if length is longer then allocated data
-                if (l > RGBW_PER_UNIVERSE * 4) {
-                  l = RGBW_PER_UNIVERSE * 4;
+                if (dmx_length > RGBW_PER_UNIVERSE * 4) {
+                  dmx_length = RGBW_PER_UNIVERSE * 4;
                 }
 
                 switch (port) {
                   case 0: {
-                      memcpy(led_data, dmx->Data, l);
+                      // Copy dmx data to the first 1/4 of led_data
+                      memcpy(led_data_ptr_1, dmx->Data, dmx_length);
                       FastLED[0].show(led_data, NUM_RGB_LEDS_1, 255);
                       break;
                     }
-                  case 1: {                   
-                      memcpy(led_pointer_2, dmx->Data, l);
-                      FastLED[0].show((CRGB*)led_pointer_1, NUM_RGB_LEDS_2, 255);
-                      FastLED[1].show((CRGB*)led_pointer_2, NUM_RGB_LEDS_1, 255);
+                  case 1: {     
+                      // Copy dmx data to the second 1/4 of the led_data              
+                      memcpy(led_data_ptr_2, dmx->Data, dmx_length);
+                      FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_2, 255);
+                      FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_1, 255);
                       break;
                     }
                   case 2: {
-                      memcpy(led_pointer_3, dmx->Data, l);
-                      FastLED[0].show((CRGB*)led_pointer_1, NUM_RGB_LEDS_3, 255);
-                      FastLED[1].show((CRGB*)led_pointer_2, NUM_RGB_LEDS_2, 255);
-                      FastLED[2].show((CRGB*)led_pointer_3, NUM_RGB_LEDS_1, 255);
+                      memcpy(led_data_ptr_3, dmx->Data, dmx_length);
+                      FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_3, 255);
+                      FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_2, 255);
+                      FastLED[2].show((CRGB*)led_data_ptr_3, NUM_RGB_LEDS_1, 255);
                       break;
                     }
                   case 3: {
-                      memcpy(led_pointer_4, dmx->Data, l);
-                      //FastLED[0].show((CRGB*)led_pointer_1, NUM_RGB_LEDS_4, 255);
-                      FastLED[1].show((CRGB*)led_pointer_2, NUM_RGB_LEDS_3, 255);
-                      FastLED[2].show((CRGB*)led_pointer_3, NUM_RGB_LEDS_2, 255);
-                      FastLED[3].show((CRGB*)led_pointer_4, NUM_RGB_LEDS_1, 255);
+                      memcpy(led_data_ptr_4, dmx->Data, dmx_length);
+                      //FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_4, 255);
+                      FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_3, 255);
+                      FastLED[2].show((CRGB*)led_data_ptr_3, NUM_RGB_LEDS_2, 255);
+                      FastLED[3].show((CRGB*)led_data_ptr_4, NUM_RGB_LEDS_1, 255);
                       break;
                     }
                 }
