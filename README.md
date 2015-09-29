@@ -13,8 +13,8 @@ Installation
 ------------
 - Install [Teensyduino (1.25)](https://www.pjrc.com/teensy/td_download.html)
 	- FastLED library is required when asked about libraries to install
-- Install [ArtNode](https://github.com/tobiasebsen/ArtNode) 
-	- `git clone https://github.com/tobiasebsen/ArtNode ~/Documents/Arduino/libraries/ArtNode`
+- Install [ArtNode](https://github.com/vertigo-dk/ArtNode) 
+	- `git clone https://github.com/vertigo-dk/ArtNode ~/Documents/Arduino/libraries/ArtNode`
 - Open Arduino IDE, select Teensy LC from Tools -> Board 
 
 Network setup
