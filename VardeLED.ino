@@ -2,6 +2,7 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
+#include "ArtNetFrameExtension.h"
 
 #include "TeensyMAC.h"
 #include <EEPROM.h>
@@ -9,11 +10,11 @@
 #define VERSION_HI 0
 #define VERSION_LO 3
 
-#define RGBW_PER_UNIVERSE   127 // Should be 128, but madmapper wont send 128 rgbw channels out....
+#define RGBW_PER_UNIVERSE   128
 #define RGB_PER_UNIVERSE    RGBW_PER_UNIVERSE*4.0/3.0
 
 #define NUM_RGB_LEDS_4      (int)ceil(RGB_PER_UNIVERSE * 4)
-//#define NUM_RGB_LEDS_3    (int)ceil(RGB_PER_UNIVERSE * 3) 
+//#define NUM_RGB_LEDS_3    (int)ceil(RGB_PER_UNIVERSE * 3)
 #define NUM_RGB_LEDS_3      287 // We never use 3 full universes, so cap the length for better performance
 #define NUM_RGB_LEDS_2      (int)ceil(RGB_PER_UNIVERSE * 2)
 #define NUM_RGB_LEDS_1      (int)ceil(RGB_PER_UNIVERSE)
@@ -39,8 +40,8 @@ byte udp_buffer[600];
 CRGB led_data[NUM_RGB_LEDS_4];
 byte * led_data_ptr_1 = (byte*)led_data;
 byte * led_data_ptr_2 = (byte*)led_data + RGBW_PER_UNIVERSE * 4;
-byte * led_data_ptr_3 = (byte*)led_data + 2*RGBW_PER_UNIVERSE * 4;
-byte * led_data_ptr_4 = (byte*)led_data + 3*RGBW_PER_UNIVERSE * 4;
+byte * led_data_ptr_3 = (byte*)led_data + 2 * RGBW_PER_UNIVERSE * 4;
+byte * led_data_ptr_4 = (byte*)led_data + 3 * RGBW_PER_UNIVERSE * 4;
 
 bool locateMode = false;
 
@@ -66,14 +67,14 @@ ArtConfig config = {
   VERSION_LO
 };
 
-ArtNode node;
+ArtNodeExtended node;
 ////////////////////////////////////////////////////////////
 
 void setup() {
   loadConfig();
-
-  config.numPorts = 4;
-  for (int i = 0; i < config.numPorts; i++) {
+ 
+  config.numPorts = 4 ;
+  for (int i = 0; i < 4; i++) {
     config.portTypes[i] = PortTypeDmx | PortTypeOutput;
   }
 
@@ -108,7 +109,7 @@ void setup() {
   udp.begin(config.udpPort);
 
   // Open ArtNet
-  node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
+  node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
 
   // Create 4 outputs with different lengths (can be tweaked)
   FastLED.addLeds<WS2812, PIN_LED_1, RGB>(led_data, NUM_RGB_LEDS_3);
@@ -116,7 +117,7 @@ void setup() {
   FastLED.addLeds<WS2812, PIN_LED_3, RGB>(led_data, NUM_RGB_LEDS_2);
   FastLED.addLeds<WS2812, PIN_LED_4, RGB>(led_data, NUM_RGB_LEDS_1);
   FastLED.setDither(0);
-  
+
   Serial.begin(9600);
 
   blink();
@@ -126,15 +127,30 @@ void setup() {
 void loop() {
 
   while (udp.parsePacket()) {
-digitalWrite(PIN_DEBUG, HIGH);
-                    
-    // First read the header to make sure it's Art-Net
+    digitalWrite(PIN_DEBUG, HIGH);
+
+    // Special ArtNet Frame Extension
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
     if (n >= sizeof(ArtHeader)) {
-
       ArtHeader* header = (ArtHeader*)udp_buffer;
       // Check packet ID
-      if (memcmp(header->ID, "Art-Net", 8) == 0) {
+      /*if (memcmp(header->ID, "Art-Ext", 8) == 0) {
+        // Read the rest of the packet
+        udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
+
+        // Package Op-Code determines type of packet
+        switch (header->OpCode) {
+          // ArtNet Frame Extension
+          case OpPoll | 0x0001:
+            node.createExtendedPollReply();
+            artnetSend(udp_buffer, node.sizeOfExtendedPollReply());            
+            break;
+
+        }
+      }
+
+      // Standard ArtNet commands
+      else */if (memcmp(header->ID, "Art-Net", 8) == 0) {
 
         // Read the rest of the packet
         udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
@@ -147,6 +163,7 @@ digitalWrite(PIN_DEBUG, HIGH);
             node.createPollReply();
             artnetSend(udp_buffer, sizeof(ArtPollReply));
             break;
+
 
           // DMX packet
           case OpDmx: {
@@ -168,12 +185,12 @@ digitalWrite(PIN_DEBUG, HIGH);
                       //FastLED[0].show(led_data, NUM_RGB_LEDS_1, 255);
                       break;
                     }
-                  case 1: {     
-                      // Copy dmx data to the second 1/4 of the led_data              
+                  case 1: {
+                      // Copy dmx data to the second 1/4 of the led_data
                       memcpy(led_data_ptr_2, dmx->Data, dmx_length);
-                     // FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_2, 255);
+                      // FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_2, 255);
                       //FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_1, 255);
-                      
+
                       break;
                     }
                   case 2: {
@@ -196,12 +213,12 @@ digitalWrite(PIN_DEBUG, HIGH);
             }
             break;
           case 0x5200: { //OpSync
-            FastLED[0].show(led_data, NUM_RGB_LEDS_3, 255);              
-             /*FastLED[1].show(led_data, NUM_RGB_LEDS_3, 255);              
-              FastLED[2].show(led_data, NUM_RGB_LEDS_2, 255);              
-               FastLED[3].show(led_data, NUM_RGB_LEDS_1, 255);              */
-           break;
-          }
+              FastLED[0].show(led_data, NUM_RGB_LEDS_1, 255);
+              FastLED[1].show(led_data, NUM_RGB_LEDS_1, 255);
+              FastLED[2].show(led_data, NUM_RGB_LEDS_1, 255);
+              FastLED[3].show(led_data, NUM_RGB_LEDS_1, 255);
+              break;
+            }
           case OpAddress: {
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
 
@@ -232,7 +249,7 @@ digitalWrite(PIN_DEBUG, HIGH);
               }
 
 
-              node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
+              node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
 
               saveConfig();
               loadConfig();
@@ -252,8 +269,8 @@ digitalWrite(PIN_DEBUG, HIGH);
         }
       }
     }
-      digitalWrite(PIN_DEBUG, LOW);
-                    
+    digitalWrite(PIN_DEBUG, LOW);
+
 
   }
 
