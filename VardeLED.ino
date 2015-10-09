@@ -19,7 +19,7 @@
 #define NUM_RGB_LEDS_1      (int)ceil(RGB_PER_UNIVERSE)
 
 #define PIN_RESET 9
-#define PIN_STATUS_LED 13
+#define PIN_DEBUG 2
 #define PIN_LED_1 5
 #define PIN_LED_2 20
 #define PIN_LED_3 8
@@ -85,6 +85,9 @@ void setup() {
   delay(150);
 #endif
 
+  // Setup DEBUG pin
+  pinMode(PIN_DEBUG, OUTPUT);
+
   // Read MAC address
   mac_addr mac;
   for (int i = 3; i < 6; i++) {
@@ -123,6 +126,8 @@ void setup() {
 void loop() {
 
   while (udp.parsePacket()) {
+digitalWrite(PIN_DEBUG, HIGH);
+                    
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
     if (n >= sizeof(ArtHeader)) {
@@ -160,36 +165,43 @@ void loop() {
                   case 0: {
                       // Copy dmx data to the first 1/4 of led_data
                       memcpy(led_data_ptr_1, dmx->Data, dmx_length);
-                      FastLED[0].show(led_data, NUM_RGB_LEDS_1, 255);
+                      //FastLED[0].show(led_data, NUM_RGB_LEDS_1, 255);
                       break;
                     }
                   case 1: {     
                       // Copy dmx data to the second 1/4 of the led_data              
                       memcpy(led_data_ptr_2, dmx->Data, dmx_length);
-                      FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_2, 255);
-                      FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_1, 255);
+                     // FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_2, 255);
+                      //FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_1, 255);
+                      
                       break;
                     }
                   case 2: {
                       memcpy(led_data_ptr_3, dmx->Data, dmx_length);
-                      FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_3, 255);
-                      FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_2, 255);
-                      FastLED[2].show((CRGB*)led_data_ptr_3, NUM_RGB_LEDS_1, 255);
+                      //FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_3, 255);
+                      //FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_2, 255);
+                      //FastLED[2].show((CRGB*)led_data_ptr_3, NUM_RGB_LEDS_1, 255);
                       break;
                     }
                   case 3: {
                       memcpy(led_data_ptr_4, dmx->Data, dmx_length);
                       //FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_4, 255);
-                      FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_3, 255);
-                      FastLED[2].show((CRGB*)led_data_ptr_3, NUM_RGB_LEDS_2, 255);
-                      FastLED[3].show((CRGB*)led_data_ptr_4, NUM_RGB_LEDS_1, 255);
+                      //FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_3, 255);
+                      //FastLED[2].show((CRGB*)led_data_ptr_3, NUM_RGB_LEDS_2, 255);
+                      //FastLED[3].show((CRGB*)led_data_ptr_4, NUM_RGB_LEDS_1, 255);
                       break;
                     }
                 }
               }
             }
             break;
-
+          case 0x5200: { //OpSync
+            FastLED[0].show(led_data, NUM_RGB_LEDS_3, 255);              
+             /*FastLED[1].show(led_data, NUM_RGB_LEDS_3, 255);              
+              FastLED[2].show(led_data, NUM_RGB_LEDS_2, 255);              
+               FastLED[3].show(led_data, NUM_RGB_LEDS_1, 255);              */
+           break;
+          }
           case OpAddress: {
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
 
@@ -240,6 +252,9 @@ void loop() {
         }
       }
     }
+      digitalWrite(PIN_DEBUG, LOW);
+                    
+
   }
 
   if (locateMode) {
