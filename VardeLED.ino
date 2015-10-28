@@ -204,10 +204,10 @@ digitalWrite(PIN_DEBUG, HIGH);
             }
             break;
           case 0x5200: { //OpSync
-            FastLED[0].show(led_data, NUM_PIXELS_OUT_1 *4.0/3.0, 255);              
-            FastLED[1].show(led_data, NUM_PIXELS_OUT_2 *4.0/3.0, 255);              
-            FastLED[2].show(led_data, NUM_PIXELS_OUT_3 *4.0/3.0, 255);              
-            FastLED[3].show(led_data, NUM_PIXELS_OUT_4 *4.0/3.0, 255);              
+            FastLED[0].show((CRGB*)led_data_ptr_1, NUM_PIXELS_OUT_1 *4.0/3.0, 255);              
+            FastLED[1].show((CRGB*)led_data_ptr_2, NUM_PIXELS_OUT_2 *4.0/3.0, 255);              
+            FastLED[2].show((CRGB*)led_data_ptr_3, NUM_PIXELS_OUT_3 *4.0/3.0, 255);              
+            FastLED[3].show((CRGB*)led_data_ptr_4, NUM_PIXELS_OUT_4 *4.0/3.0, 255);              
              /*FastLED[1].show(led_data, NUM_RGB_LEDS_3, 255);              
               FastLED[2].show(led_data, NUM_RGB_LEDS_2, 255);              
                FastLED[3].show(led_data, NUM_RGB_LEDS_1, 255);              */
