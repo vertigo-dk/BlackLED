@@ -9,12 +9,20 @@
 #define VERSION_HI 0
 #define VERSION_LO 3
 
-#define RGBW_PER_UNIVERSE   127 // Should be 128, but madmapper wont send 128 rgbw channels out....
+// Set number of pixels (RGBW) per output
+#define NUM_PIXELS_OUT_1 20
+#define NUM_PIXELS_OUT_2 20
+#define NUM_PIXELS_OUT_3 20
+#define NUM_PIXELS_OUT_4 20
+
+//
+#define RGBW_PER_UNIVERSE   128
 #define RGB_PER_UNIVERSE    RGBW_PER_UNIVERSE*4.0/3.0
 
+// Constants of max number RGB diodes per output
 #define NUM_RGB_LEDS_4      (int)ceil(RGB_PER_UNIVERSE * 4)
-//#define NUM_RGB_LEDS_3    (int)ceil(RGB_PER_UNIVERSE * 3) 
-#define NUM_RGB_LEDS_3      287 // We never use 3 full universes, so cap the length for better performance
+#define NUM_RGB_LEDS_3    (int)ceil(RGB_PER_UNIVERSE * 3) 
+//#define NUM_RGB_LEDS_3      287 // We never use 3 full universes, so cap the length for better performance
 #define NUM_RGB_LEDS_2      (int)ceil(RGB_PER_UNIVERSE * 2)
 #define NUM_RGB_LEDS_1      (int)ceil(RGB_PER_UNIVERSE)
 
@@ -196,7 +204,10 @@ digitalWrite(PIN_DEBUG, HIGH);
             }
             break;
           case 0x5200: { //OpSync
-            FastLED[0].show(led_data, NUM_RGB_LEDS_3, 255);              
+            FastLED[0].show(led_data, NUM_PIXELS_OUT_1 *4.0/3.0, 255);              
+            FastLED[1].show(led_data, NUM_PIXELS_OUT_2 *4.0/3.0, 255);              
+            FastLED[2].show(led_data, NUM_PIXELS_OUT_3 *4.0/3.0, 255);              
+            FastLED[3].show(led_data, NUM_PIXELS_OUT_4 *4.0/3.0, 255);              
              /*FastLED[1].show(led_data, NUM_RGB_LEDS_3, 255);              
               FastLED[2].show(led_data, NUM_RGB_LEDS_2, 255);              
                FastLED[3].show(led_data, NUM_RGB_LEDS_1, 255);              */
