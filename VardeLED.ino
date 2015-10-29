@@ -1,6 +1,7 @@
 #include "FastLED.h"
 #include <SPI.h>
 #include <Ethernet.h>
+#include "utility/w5100.h"
 #include <ArtNode.h>
 
 #include "TeensyMAC.h"
@@ -113,6 +114,15 @@ void setup() {
   IPAddress subnet(255, 0, 0, 0);
 
   Ethernet.begin(config.mac, config.ip,  gateway, gateway, subnet);
+
+  // Socket RX buffer hack
+  SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
+  W5100.SSIZE = 16 << 10;
+  W5100.writeSnRX_SIZE(0, W5100.SSIZE >> 10);
+  for (int i=1; i<8; i++)
+    W5100.writeSnRX_SIZE(i, 0);
+  SPI.endTransaction();
+  
   udp.begin(config.udpPort);
 
   // Open ArtNet
