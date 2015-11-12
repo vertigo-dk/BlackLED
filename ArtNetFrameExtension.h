@@ -43,5 +43,8 @@ public:
   void createExtendedPollReply();
   int sizeOfExtendedPollReply();
 
+  
+  uint16_t getAddress(uint8_t subUni, uint8_t net);
+  uint16_t getStartAddress();
 };
 

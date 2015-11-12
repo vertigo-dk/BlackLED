@@ -5,6 +5,7 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
+#include "ArtNetFrameExtension.h"
 
 #include "TeensyMAC.h"
 #include <EEPROM.h>
@@ -64,7 +65,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "VertigoLED",                           // Short name
   "VertigoLED",                           // Long name
-  4,                                    // Number of ports
+  6,                                    // Number of ports
   {PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput}, // Port types
   {0, 0, 0, 0},                         // Port input universes (0-15)
   {0, 1, 2, 3},                          // Port output universes (0-15)
@@ -72,13 +73,13 @@ ArtConfig config = {
   VERSION_LO
 };
 
-ArtNode node;
+ArtNodeExtended node;
 ////////////////////////////////////////////////////////////
 
 void setup() {
   loadConfig();
 
-  config.numPorts = 4;
+  config.numPorts = 6;
   for (int i = 0; i < config.numPorts; i++) {
     config.portTypes[i] = PortTypeDmx | PortTypeOutput;
   }
@@ -92,7 +93,7 @@ void setup() {
 #endif
 
   // Setup DEBUG pin
-  //pinMode(PIN_DEBUG, OUTPUT);
+  pinMode(PIN_DEBUG, OUTPUT);
 
   // Read MAC address
   mac_addr mac;
@@ -114,7 +115,8 @@ void setup() {
   udp.begin(config.udpPort);
 
   // Open ArtNet
-  node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
+  node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
+
 
   LEDS.addLeds<WS2811_PORTD, 8>(led_data, NUM_PIXELS_OUT_RGB);
   //LEDS.addLeds<OCTOWS2811>(led_data, NUM_PIXELS_OUT_RGB);
@@ -124,130 +126,164 @@ void setup() {
 
   blink();
 }
+
+////////////////////////////////////////////////////////////
 void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
+
+  int d =  offset;
+  int bankoffset = ceil(d / 12);
+ 
   for (int i = 0; i < dmx_length; i++) {
-    int d = i + offset;
-    int offset = ceil(d / 12);
-    int l = lookup[d % 12] + offset * 12;
-    ledData[l] = dmxData[i];
+    int l = lookup[d % 12] + bankoffset  * 12;
+    ledData[l] = *(dmxData++);
+
+    d++; 
+    if(d%12 == 0){
+      bankoffset ++;
+    }
   }
+
+  //memcpy(ledData+offset, dmxData, dmx_length);
 }
+
 ////////////////////////////////////////////////////////////
 void loop() {
 
   while (udp.parsePacket()) {
-    //digitalWrite(PIN_DEBUG, HIGH);
+    digitalWrite(PIN_DEBUG, HIGH);
 
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
     if (n >= sizeof(ArtHeader)) {
 
       ArtHeader* header = (ArtHeader*)udp_buffer;
-      // Check packet ID
-      if (memcmp(header->ID, "Art-Net", 8) == 0) {
 
+      if (memcmp(header->ID, "Art-Ext", 8) == 0) {
         // Read the rest of the packet
         udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
 
         // Package Op-Code determines type of packet
         switch (header->OpCode) {
-
-          // Poll packet. Send poll reply.
-          case OpPoll:
-            node.createPollReply();
-            artnetSend(udp_buffer, sizeof(ArtPollReply));
+          // ArtNet Frame Extension
+          case OpPoll | 0x0001:
+            node.createExtendedPollReply();
+            artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
             break;
 
-          // DMX packet
-          case OpDmx: {
-              ArtDmx* dmx = (ArtDmx*)udp_buffer;
-              int port = node.getPort(dmx->SubUni, dmx->Net);
-              if (!locateMode && port >= 0 && port < 4) {
-                // Calculate length of DMX packet. Requires bit swap length from dmx packet
-                int dmx_length = ((dmx->Length & 0xF) << 8) + ((dmx->Length & 0xF0) >> 8);
+        }
+      }
 
-                // Check if length is longer then allocated data
-                if (dmx_length > RGBW_PER_UNIVERSE * 4) {
-                  dmx_length = RGBW_PER_UNIVERSE * 4;
-                }
+      // Standard ArtNet commands
+      else
+        // Check packet ID
+        if (memcmp(header->ID, "Art-Net", 8) == 0) {
 
-                switch (port) {
-                  case 0: {
-                      setData(dmx->Data, led_data_ptr_1, dmx_length, 0);
-                      break;
-                    }
-                  case 1: {
-                      setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4);                    
-                      break;
-                    }
-                  case 2: {
-                     setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 2);
-                      break;
-                    }
-                  case 3: {
-                      /*  for (int i = 0; i < dmx_length; i++) {
-                          int offset = ceil(i / 12);
-                          int l = lookup[i % 12] + offset * 12;
-                          led_data_ptr_4[l] = dmx->Data[i];
-                        }*/
-                      break;
-                    }
-                }
-              }
-            }
-            break;
-          case 0x5200: { //OpSync
-              LEDS.show();
+          // Read the rest of the packet
+          udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
 
-              break;
-            }
-          case OpAddress: {
-              T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
+          // Package Op-Code determines type of packet
+          switch (header->OpCode) {
 
-              if (address->LongName[0] != 0)
-                memcpy(config.longName, address->LongName, 64);
-              if (address->ShortName[0] != 0)
-                memcpy(config.shortName, address->ShortName, 18);
-
-              if (address->NetSwitch != 0x7f)
-                config.net = address->NetSwitch;
-
-              if (address->SubSwitch != 0x7f)
-                config.subnet = address->SubSwitch;
-
-
-              for (int i = 0; i < 4; i++) {
-                if (address->SwIn[i] != 0x7f)
-                  config.portAddrIn[i] = address->SwIn[i];
-                if (address->SwOut[i] != 0x7f) {
-                  config.portAddrOut[i] = address->SwOut[i];
-                }
-              }
-
-              if (address->Command == 0x04) {
-                locateMode = true;
-              } else {
-                locateMode = false;
-              }
-
-
-              node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
-
-              saveConfig();
-              loadConfig();
+            // Poll packet. Send poll reply.
+            case OpPoll:
               node.createPollReply();
               artnetSend(udp_buffer, sizeof(ArtPollReply));
               break;
-            }
-          // IpProg packet
 
-          // Unhandled packet
-          default:
-            break;
+            // DMX packet
+            case OpDmx: {
+                ArtDmx* dmx = (ArtDmx*)udp_buffer;
+                int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
+                if (!locateMode && port >= 0 && port < config.numPorts) {
+                  // Calculate length of DMX packet. Requires bit swap length from dmx packet
+                  int dmx_length = ((dmx->Length & 0xF) << 8) + ((dmx->Length & 0xF0) >> 8);
+
+                  // Check if length is longer then allocated data
+                  if (dmx_length > RGBW_PER_UNIVERSE * 4) {
+                    dmx_length = RGBW_PER_UNIVERSE * 4;
+                  }
+
+                  switch (port) {
+                    case 0: {
+                        setData(dmx->Data, led_data_ptr_1, dmx_length, 0);
+                        break;
+                      }
+                    case 1: {
+                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4);
+                        break;
+                      }
+                    case 2: {
+                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 2);
+                        break;
+                      }
+                    case 3: {
+                        setData(dmx->Data, led_data_ptr_2, dmx_length, 0);
+                        break;
+                      }
+                    case 4: {
+                        setData(dmx->Data, led_data_ptr_2, dmx_length, RGBW_PER_UNIVERSE * 4);
+                        break;
+                      }
+                    case 5: {
+                        setData(dmx->Data, led_data_ptr_2, dmx_length, RGBW_PER_UNIVERSE * 4 * 2);
+                        break;
+                      }
+                  }
+                }
+              }
+              break;
+            case 0x5200: { //OpSync
+                LEDS.show();
+
+                break;
+              }
+            case OpAddress: {
+                T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
+
+                if (address->LongName[0] != 0)
+                  memcpy(config.longName, address->LongName, 64);
+                if (address->ShortName[0] != 0)
+                  memcpy(config.shortName, address->ShortName, 18);
+
+                if (address->NetSwitch != 0x7f)
+                  config.net = address->NetSwitch;
+
+                if (address->SubSwitch != 0x7f)
+                  config.subnet = address->SubSwitch;
+
+
+                for (int i = 0; i < 4; i++) {
+                  if (address->SwIn[i] != 0x7f)
+                    config.portAddrIn[i] = address->SwIn[i];
+                  if (address->SwOut[i] != 0x7f) {
+                    config.portAddrOut[i] = address->SwOut[i];
+                  }
+                }
+
+                if (address->Command == 0x04) {
+                  locateMode = true;
+                } else {
+                  locateMode = false;
+                }
+
+
+                node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
+
+                saveConfig();
+                loadConfig();
+                node.createPollReply();
+                artnetSend(udp_buffer, sizeof(ArtPollReply));
+                break;
+              }
+            // IpProg packet
+
+            // Unhandled packet
+            default:
+              break;
+          }
         }
-      }
     }
-    //digitalWrite(PIN_DEBUG, LOW);
+    digitalWrite(PIN_DEBUG, LOW);
 
 
   }
