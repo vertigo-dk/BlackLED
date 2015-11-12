@@ -1,4 +1,7 @@
-#include "FastLED.h"
+//#define USE_OCTOWS2811
+//#include<OctoWS2811.h>
+
+#include <FastLED.h>
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
@@ -7,31 +10,18 @@
 #include <EEPROM.h>
 
 #define VERSION_HI 0
-#define VERSION_LO 3
+#define VERSION_LO 4
 
 // Set number of pixels (RGBW) per output
-#define NUM_PIXELS_OUT_1 20
-#define NUM_PIXELS_OUT_2 20
-#define NUM_PIXELS_OUT_3 20
-#define NUM_PIXELS_OUT_4 20
+#define NUM_PIXELS_OUT 384
+#define NUM_PIXELS_OUT_RGB int(ceil(NUM_PIXELS_OUT*4.0/3.0))
 
-//
+//Artnet universe
 #define RGBW_PER_UNIVERSE   128
-#define RGB_PER_UNIVERSE    RGBW_PER_UNIVERSE*4.0/3.0
-
-// Constants of max number RGB diodes per output
-#define NUM_RGB_LEDS_4      (int)ceil(RGB_PER_UNIVERSE * 4)
-#define NUM_RGB_LEDS_3    (int)ceil(RGB_PER_UNIVERSE * 3) 
-//#define NUM_RGB_LEDS_3      287 // We never use 3 full universes, so cap the length for better performance
-#define NUM_RGB_LEDS_2      (int)ceil(RGB_PER_UNIVERSE * 2)
-#define NUM_RGB_LEDS_1      (int)ceil(RGB_PER_UNIVERSE)
+#define RGB_PER_UNIVERSE    int(ceil(RGBW_PER_UNIVERSE*4.0/3.0))
 
 #define PIN_RESET 9
-#define PIN_DEBUG 2
-#define PIN_LED_1 5
-#define PIN_LED_2 20
-#define PIN_LED_3 8
-#define PIN_LED_4 14
+#define PIN_DEBUG 1
 
 // ID of the settings block
 #define CONFIG_VERSION "ls1"
@@ -44,11 +34,19 @@
 EthernetUDP udp;
 byte udp_buffer[600];
 
-CRGB led_data[NUM_RGB_LEDS_4];
-byte * led_data_ptr_1 = (byte*)led_data;
-byte * led_data_ptr_2 = (byte*)led_data + RGBW_PER_UNIVERSE * 4;
-byte * led_data_ptr_3 = (byte*)led_data + 2*RGBW_PER_UNIVERSE * 4;
-byte * led_data_ptr_4 = (byte*)led_data + 3*RGBW_PER_UNIVERSE * 4;
+// Fucked up lookup....
+int lookup[] = {1, 0, 2, 4, 3, 5, 7, 6, 8, 10, 9, 11};
+
+CRGB led_data[NUM_PIXELS_OUT_RGB * 8];
+byte * led_data_ptr_1 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_2 = (byte*)led_data + 7 * NUM_PIXELS_OUT_RGB * 3;
+//byte * led_data_ptr_2 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3  ;
+
+
+
+//byte * led_data_ptr_2 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3;
+/*byte * led_data_ptr_3 = (byte*)led_data + 5*NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_4 = (byte*)led_data + 4*NUM_PIXELS_OUT_RGB * 3;*/
 
 bool locateMode = false;
 
@@ -64,8 +62,8 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "VardeLED",                           // Short name
-  "VardeLED",                           // Long name
+  "VertigoLED",                           // Short name
+  "VertigoLED",                           // Long name
   4,                                    // Number of ports
   {PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput}, // Port types
   {0, 0, 0, 0},                         // Port input universes (0-15)
@@ -94,7 +92,7 @@ void setup() {
 #endif
 
   // Setup DEBUG pin
-  pinMode(PIN_DEBUG, OUTPUT);
+  //pinMode(PIN_DEBUG, OUTPUT);
 
   // Read MAC address
   mac_addr mac;
@@ -118,24 +116,28 @@ void setup() {
   // Open ArtNet
   node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
 
-  // Create 4 outputs with different lengths (can be tweaked)
-  FastLED.addLeds<WS2812, PIN_LED_1, RGB>(led_data, NUM_RGB_LEDS_3);
-  FastLED.addLeds<WS2812, PIN_LED_2, RGB>(led_data, NUM_RGB_LEDS_3);
-  FastLED.addLeds<WS2812, PIN_LED_3, RGB>(led_data, NUM_RGB_LEDS_2);
-  FastLED.addLeds<WS2812, PIN_LED_4, RGB>(led_data, NUM_RGB_LEDS_1);
-  FastLED.setDither(0);
-  
+  LEDS.addLeds<WS2811_PORTD, 8>(led_data, NUM_PIXELS_OUT_RGB);
+  //LEDS.addLeds<OCTOWS2811>(led_data, NUM_PIXELS_OUT_RGB);
+  //FastLED.setDither(0);
+
   Serial.begin(9600);
 
   blink();
 }
-
+void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
+  for (int i = 0; i < dmx_length; i++) {
+    int d = i + offset;
+    int offset = ceil(d / 12);
+    int l = lookup[d % 12] + offset * 12;
+    ledData[l] = dmxData[i];
+  }
+}
 ////////////////////////////////////////////////////////////
 void loop() {
 
   while (udp.parsePacket()) {
-digitalWrite(PIN_DEBUG, HIGH);
-                    
+    //digitalWrite(PIN_DEBUG, HIGH);
+
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
     if (n >= sizeof(ArtHeader)) {
@@ -171,32 +173,23 @@ digitalWrite(PIN_DEBUG, HIGH);
 
                 switch (port) {
                   case 0: {
-                      // Copy dmx data to the first 1/4 of led_data
-                      memcpy(led_data_ptr_1, dmx->Data, dmx_length);
-                      //FastLED[0].show(led_data, NUM_RGB_LEDS_1, 255);
+                      setData(dmx->Data, led_data_ptr_1, dmx_length, 0);
                       break;
                     }
-                  case 1: {     
-                      // Copy dmx data to the second 1/4 of the led_data              
-                      memcpy(led_data_ptr_2, dmx->Data, dmx_length);
-                     // FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_2, 255);
-                      //FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_1, 255);
-                      
+                  case 1: {
+                      setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4);                    
                       break;
                     }
                   case 2: {
-                      memcpy(led_data_ptr_3, dmx->Data, dmx_length);
-                      //FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_3, 255);
-                      //FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_2, 255);
-                      //FastLED[2].show((CRGB*)led_data_ptr_3, NUM_RGB_LEDS_1, 255);
+                     setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 2);
                       break;
                     }
                   case 3: {
-                      memcpy(led_data_ptr_4, dmx->Data, dmx_length);
-                      //FastLED[0].show((CRGB*)led_data_ptr_1, NUM_RGB_LEDS_4, 255);
-                      //FastLED[1].show((CRGB*)led_data_ptr_2, NUM_RGB_LEDS_3, 255);
-                      //FastLED[2].show((CRGB*)led_data_ptr_3, NUM_RGB_LEDS_2, 255);
-                      //FastLED[3].show((CRGB*)led_data_ptr_4, NUM_RGB_LEDS_1, 255);
+                      /*  for (int i = 0; i < dmx_length; i++) {
+                          int offset = ceil(i / 12);
+                          int l = lookup[i % 12] + offset * 12;
+                          led_data_ptr_4[l] = dmx->Data[i];
+                        }*/
                       break;
                     }
                 }
@@ -204,15 +197,10 @@ digitalWrite(PIN_DEBUG, HIGH);
             }
             break;
           case 0x5200: { //OpSync
-            FastLED[0].show((CRGB*)led_data_ptr_1, NUM_PIXELS_OUT_1 *4.0/3.0, 255);              
-            FastLED[1].show((CRGB*)led_data_ptr_2, NUM_PIXELS_OUT_2 *4.0/3.0, 255);              
-            FastLED[2].show((CRGB*)led_data_ptr_3, NUM_PIXELS_OUT_3 *4.0/3.0, 255);              
-            FastLED[3].show((CRGB*)led_data_ptr_4, NUM_PIXELS_OUT_4 *4.0/3.0, 255);              
-             /*FastLED[1].show(led_data, NUM_RGB_LEDS_3, 255);              
-              FastLED[2].show(led_data, NUM_RGB_LEDS_2, 255);              
-               FastLED[3].show(led_data, NUM_RGB_LEDS_1, 255);              */
-           break;
-          }
+              LEDS.show();
+
+              break;
+            }
           case OpAddress: {
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
 
@@ -252,52 +240,57 @@ digitalWrite(PIN_DEBUG, HIGH);
               break;
             }
           // IpProg packet
-          /*case OpIpProg:
-            node.createIpProgReply();
-            artnetSend(udp_buffer, sizeof(ArtIpProgReply));
-            break;
-          */
+
           // Unhandled packet
           default:
             break;
         }
       }
     }
-      digitalWrite(PIN_DEBUG, LOW);
-                    
+    //digitalWrite(PIN_DEBUG, LOW);
+
 
   }
 
   if (locateMode) {
-    byte* d = (byte*)led_data;
+    /*byte* d = (byte*)led_data;
     for (int i = 0; i < NUM_RGB_LEDS_4 * 3; i++) {
       d[i * 4] = 0;
       d[i * 4 + 1] = (sin(10 + i + millis() / 100.0) + 1) * 128.0;
       d[i * 4 + 2] = 0;
       d[i * 4 + 3] = (sin(i + millis() / 100.0) + 1) * 128.0;
     }
-    FastLED[0].show(led_data, NUM_RGB_LEDS_4, 255);
-    FastLED[1].show(led_data, NUM_RGB_LEDS_3, 255);
-    FastLED[2].show(led_data, NUM_RGB_LEDS_2, 255);
-    FastLED[3].show(led_data, NUM_RGB_LEDS_1, 255);
+    LEDS.show();*/
+
   }
+
+  //blink();
 }
 
 void blink() {
   byte* d = (byte*)led_data;
 
-  for (int i = 0; i < NUM_RGB_LEDS_4 * 3; i++) {
+  for (int i = 0; i < 8 * NUM_PIXELS_OUT_RGB * 3; i++) {
     d[i] = 30;
   }
-  FastLED[0].show(led_data, NUM_RGB_LEDS_4, 255);
+  LEDS.show();
 
   delay(300);
 
-  for (int i = 0; i < NUM_RGB_LEDS_4 * 3; i++) {
+  for (int i = 0; i <  8 * NUM_PIXELS_OUT_RGB * 3; i++) {
     d[i] = 0;
   }
-  FastLED[0].show(led_data, NUM_RGB_LEDS_4, 255);
+
+  /*
+
+  for(int i = 0; i < 8; i++) {
+    for(int j = 0; j < 128*4/3; j++) {
+      led_data[(i*128*4/3) + j] =  0x330000;//CHSV((32*i) + hue+j,192,255);
+    }
+  }*/
+  LEDS.show();
   delay(100);
+
 
 }
 
