@@ -36,7 +36,8 @@ EthernetUDP udp;
 byte udp_buffer[600];
 
 // Fucked up lookup....
-int lookup[] = {1, 0, 2, 4, 3, 5, 7, 6, 8, 10, 9, 11};
+int lookup[] = {1, 0, 2, 4, 3, 5, 7, 6, 8, 10, 9, 11}; // found system in lookup 213 213 213 213 -> could be replaced
+
 
 CRGB led_data[NUM_PIXELS_OUT_RGB * 8];
 byte * led_data_ptr_1 = (byte*)led_data + 1 * NUM_PIXELS_OUT_RGB * 3; // Sending 3 Universes on first pin out (A B C)
@@ -196,7 +197,26 @@ void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
 
   //memcpy(ledData+offset, dmxData, dmx_length);
 }
+/*
+// instead of lookup -> not tryed jet...
+void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
 
+ // int d =  offset;
+ // int bankoffset = ceil(d / 12);
+ 
+  for (int i = 0; i < dmx_length; i+=3) {
+    //int l = lookup[d % 12] + bankoffset  * 12;
+    ledData[i+1] = *(dmxData++);
+    ledData[i+0] = *(dmxData++);
+    ledData[i+2] = *(dmxData++);
+
+    //d++; 
+    //if(d%12 == 0){
+    //  bankoffset ++;
+    // }
+  }
+}
+*/
 ////////////////////////////////////////////////////////////
 void loop() {
 
