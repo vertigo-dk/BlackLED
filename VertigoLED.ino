@@ -11,10 +11,10 @@
 #include <EEPROM.h>
 
 #define VERSION_HI 0
-#define VERSION_LO 4
+#define VERSION_LO 5 // 8 outputs à 128 RGBW (1 Universe)
 
 // Set number of pixels (RGBW) per output
-#define NUM_PIXELS_OUT 384
+#define NUM_PIXELS_OUT 128
 #define NUM_PIXELS_OUT_RGB int(ceil(NUM_PIXELS_OUT*4.0/3.0))
 
 //Artnet universe
@@ -39,15 +39,8 @@ byte udp_buffer[600];
 int lookup[] = {1, 0, 2, 4, 3, 5, 7, 6, 8, 10, 9, 11};
 
 CRGB led_data[NUM_PIXELS_OUT_RGB * 8];
-byte * led_data_ptr_1 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3;
-byte * led_data_ptr_2 = (byte*)led_data + 7 * NUM_PIXELS_OUT_RGB * 3;
-//byte * led_data_ptr_2 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3  ;
-
-
-
-//byte * led_data_ptr_2 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3;
-/*byte * led_data_ptr_3 = (byte*)led_data + 5*NUM_PIXELS_OUT_RGB * 3;
-byte * led_data_ptr_4 = (byte*)led_data + 4*NUM_PIXELS_OUT_RGB * 3;*/
+byte * led_data_ptr_1 = (byte*)led_data;// + 5 * NUM_PIXELS_OUT_RGB * 3;
+//byte * led_data_ptr_2 = (byte*)led_data + 7 * NUM_PIXELS_OUT_RGB * 3;
 
 bool locateMode = false;
 
@@ -63,9 +56,9 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "VertigoLED",                           // Short name
-  "VertigoLED",                           // Long name
-  6,                                    // Number of ports
+  "VestervoldLED",                           // Short name
+  "VestervoldLED",                           // Long name
+  8,                                    // Number of ports
   {PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput}, // Port types
   {0, 0, 0, 0},                         // Port input universes (0-15)
   {0, 1, 2, 3},                          // Port output universes (0-15)
@@ -74,12 +67,57 @@ ArtConfig config = {
 };
 
 ArtNodeExtended node;
+
 ////////////////////////////////////////////////////////////
+void loadConfig() {
+  // To make sure there are settings, and they are YOURS!
+  // If nothing is found it will use the default settings.
+  if (EEPROM.read(CONFIG_MEM_START + 0) == CONFIG_VERSION[0] &&
+      EEPROM.read(CONFIG_MEM_START + 1) == CONFIG_VERSION[1] &&
+      EEPROM.read(CONFIG_MEM_START + 2) == CONFIG_VERSION[2]) {
+    for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
+      *((char*)&config + t ) = EEPROM.read(CONFIG_MEM_START + t + 3 - CONFIG_START);
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////
+void saveConfig() {
+  EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
+  EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
+  EEPROM.write(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
+  for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
+    EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
+  }
+}
+
+////////////////////////////////////////////////////////////
+void artnetSend(byte* buffer, int length) {
+  udp.beginPacket(node.broadcastIP(), config.udpPort);
+  udp.write(buffer, length);
+  udp.endPacket();
+}
+////////////////////////////////////////////////////////////
+void blink() {
+  byte* d = (byte*)led_data;
+  for (int i = 0; i < 8 * NUM_PIXELS_OUT_RGB * 3; i++) {
+    d[i] = 30;
+  }
+  LEDS.show();
+  delay(300);
+  for (int i = 0; i <  8 * NUM_PIXELS_OUT_RGB * 3; i++) {
+    d[i] = 0;
+  }
+  LEDS.show();
+  delay(100);
+}
+////////////////////////////////////////////////////////////
+
 
 void setup() {
   loadConfig();
 
-  config.numPorts = 6;
+  config.numPorts = 8;
   for (int i = 0; i < config.numPorts; i++) {
     config.portTypes[i] = PortTypeDmx | PortTypeOutput;
   }
@@ -119,8 +157,6 @@ void setup() {
 
 
   LEDS.addLeds<WS2811_PORTD, 8>(led_data, NUM_PIXELS_OUT_RGB);
-  //LEDS.addLeds<OCTOWS2811>(led_data, NUM_PIXELS_OUT_RGB);
-  //FastLED.setDither(0);
 
   Serial.begin(9600);
 
@@ -142,8 +178,6 @@ void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
       bankoffset ++;
     }
   }
-
-  //memcpy(ledData+offset, dmxData, dmx_length);
 }
 
 ////////////////////////////////////////////////////////////
@@ -217,15 +251,23 @@ void loop() {
                         break;
                       }
                     case 3: {
-                        setData(dmx->Data, led_data_ptr_2, dmx_length, 0);
+                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 3);
                         break;
                       }
                     case 4: {
-                        setData(dmx->Data, led_data_ptr_2, dmx_length, RGBW_PER_UNIVERSE * 4);
+                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 4);
                         break;
                       }
                     case 5: {
-                        setData(dmx->Data, led_data_ptr_2, dmx_length, RGBW_PER_UNIVERSE * 4 * 2);
+                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 5);
+                        break;
+                      }
+                    case 6: {
+                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 6);
+                        break;
+                      }
+                    case 7: {
+                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 7);
                         break;
                       }
                   }
@@ -303,61 +345,5 @@ void loop() {
   //blink();
 }
 
-void blink() {
-  byte* d = (byte*)led_data;
 
-  for (int i = 0; i < 8 * NUM_PIXELS_OUT_RGB * 3; i++) {
-    d[i] = 30;
-  }
-  LEDS.show();
-
-  delay(300);
-
-  for (int i = 0; i <  8 * NUM_PIXELS_OUT_RGB * 3; i++) {
-    d[i] = 0;
-  }
-
-  /*
-
-  for(int i = 0; i < 8; i++) {
-    for(int j = 0; j < 128*4/3; j++) {
-      led_data[(i*128*4/3) + j] =  0x330000;//CHSV((32*i) + hue+j,192,255);
-    }
-  }*/
-  LEDS.show();
-  delay(100);
-
-
-}
-
-
-////////////////////////////////////////////////////////////
-void loadConfig() {
-  // To make sure there are settings, and they are YOURS!
-  // If nothing is found it will use the default settings.
-  if (EEPROM.read(CONFIG_MEM_START + 0) == CONFIG_VERSION[0] &&
-      EEPROM.read(CONFIG_MEM_START + 1) == CONFIG_VERSION[1] &&
-      EEPROM.read(CONFIG_MEM_START + 2) == CONFIG_VERSION[2]) {
-    for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
-      *((char*)&config + t ) = EEPROM.read(CONFIG_MEM_START + t + 3 - CONFIG_START);
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////
-void saveConfig() {
-  EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
-  EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
-  EEPROM.write(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
-  for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
-    EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
-  }
-}
-
-////////////////////////////////////////////////////////////
-void artnetSend(byte* buffer, int length) {
-  udp.beginPacket(node.broadcastIP(), config.udpPort);
-  udp.write(buffer, length);
-  udp.endPacket();
-}
 
