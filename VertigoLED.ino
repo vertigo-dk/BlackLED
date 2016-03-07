@@ -1,6 +1,3 @@
-//#define USE_OCTOWS2811
-//#include<OctoWS2811.h>
-
 #include <FastLED.h>
 #include <SPI.h>
 #include <Ethernet.h>
@@ -14,12 +11,12 @@
 #define VERSION_LO 5 // 8 outputs à 128 RGBW (1 Universe)
 
 // Set number of pixels (RGBW) per output
-#define NUM_PIXELS_OUT 128
+#define NUM_PIXELS_OUT 128 //does not round towards RGB / 3 er potence. -> could go down to 96
 #define NUM_PIXELS_OUT_RGB int(ceil(NUM_PIXELS_OUT*4.0/3.0))
 
 //Artnet universe
-#define RGBW_PER_UNIVERSE   128
-#define RGB_PER_UNIVERSE    int(ceil(RGBW_PER_UNIVERSE*4.0/3.0))
+#define RGBW_PER_UNIVERSE  128
+#define RGB_PER_UNIVERSE   int(ceil(RGBW_PER_UNIVERSE*4.0/3.0))
 
 #define PIN_RESET 9
 #define PIN_DEBUG 1
@@ -179,6 +176,17 @@ void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
     }
   }
 }
+
+/*
+// instead of lookup -> not tryed yet...
+void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) { 
+  for (int i = 0; i < dmx_length; i+=3) {
+    ledData[i+1+offset] = *(dmxData++);
+    ledData[i+0+offset] = *(dmxData++);
+    ledData[i+2+offset] = *(dmxData++);
+  }
+}
+*/
 
 ////////////////////////////////////////////////////////////
 void loop() {
