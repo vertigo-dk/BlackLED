@@ -161,7 +161,7 @@ void setup() {
 }
 
 ////////////////////////////////////////////////////////////
-void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
+/*void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
 
   int d =  offset;
   int bankoffset = ceil(d / 12);
@@ -176,8 +176,8 @@ void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
     }
   }
 }
+*/
 
-/*
 // instead of lookup -> not tryed yet...
 void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) { 
   for (int i = 0; i < dmx_length; i+=3) {
@@ -186,7 +186,7 @@ void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
     ledData[i+2+offset] = *(dmxData++);
   }
 }
-*/
+
 
 ////////////////////////////////////////////////////////////
 void loop() {
