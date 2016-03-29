@@ -36,8 +36,14 @@ byte udp_buffer[600];
 int lookup[] = {1, 0, 2, 4, 3, 5, 7, 6, 8, 10, 9, 11};
 
 CRGB led_data[NUM_PIXELS_OUT_RGB * 8];
-byte * led_data_ptr_1 = (byte*)led_data;// + 5 * NUM_PIXELS_OUT_RGB * 3;
-//byte * led_data_ptr_2 = (byte*)led_data + 7 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_1 = (byte*)led_data + 0 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_2 = (byte*)led_data + 1 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_3 = (byte*)led_data + 2 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_4 = (byte*)led_data + 3 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_5 = (byte*)led_data + 4 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_6 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_7 = (byte*)led_data + 6 * NUM_PIXELS_OUT_RGB * 3;
+byte * led_data_ptr_8 = (byte*)led_data + 7 * NUM_PIXELS_OUT_RGB * 3;
 
 bool locateMode = false;
 
@@ -251,31 +257,31 @@ void loop() {
                         break;
                       }
                     case 1: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4);
+                        setData(dmx->Data, led_data_ptr_2, dmx_length, 0);
                         break;
                       }
                     case 2: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 2);
+                        setData(dmx->Data, led_data_ptr_3, dmx_length, 0);
                         break;
                       }
                     case 3: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 3);
+                        setData(dmx->Data, led_data_ptr_4, dmx_length, 0);
                         break;
                       }
                     case 4: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 4);
+                        setData(dmx->Data, led_data_ptr_5, dmx_length, 0);
                         break;
                       }
                     case 5: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 5);
+                        setData(dmx->Data, led_data_ptr_6, dmx_length, 0);
                         break;
                       }
                     case 6: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 6);
+                        setData(dmx->Data, led_data_ptr_7, dmx_length, 0);
                         break;
                       }
                     case 7: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 7);
+                        setData(dmx->Data, led_data_ptr_8, dmx_length, 0);
                         break;
                       }
                   }
