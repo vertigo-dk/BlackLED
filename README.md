@@ -1,4 +1,4 @@
-# VardeLED
+# BlackLED
 Software for the BlackLED controller
 
 Introduction

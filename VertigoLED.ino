@@ -75,6 +75,63 @@ ArtConfig config = {
 
 ArtNodeExtended node;
 ////////////////////////////////////////////////////////////
+void blink() {
+  byte* d = (byte*)led_data;
+
+  for (int i = 0; i < 8 * NUM_PIXELS_OUT_RGB * 3; i++) {
+    d[i] = 30;
+  }
+  LEDS.show();
+
+  delay(300);
+
+  for (int i = 0; i <  8 * NUM_PIXELS_OUT_RGB * 3; i++) {
+    d[i] = 0;
+  }
+
+  /*
+
+  for(int i = 0; i < 8; i++) {
+    for(int j = 0; j < 128*4/3; j++) {
+      led_data[(i*128*4/3) + j] =  0x330000;//CHSV((32*i) + hue+j,192,255);
+    }
+  }*/
+  LEDS.show();
+  delay(100);
+
+
+}
+////////////////////////////////////////////////////////////
+void loadConfig() {
+  // To make sure there are settings, and they are YOURS!
+  // If nothing is found it will use the default settings.
+  if (EEPROM.read(CONFIG_MEM_START + 0) == CONFIG_VERSION[0] &&
+      EEPROM.read(CONFIG_MEM_START + 1) == CONFIG_VERSION[1] &&
+      EEPROM.read(CONFIG_MEM_START + 2) == CONFIG_VERSION[2]) {
+    for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
+      *((char*)&config + t ) = EEPROM.read(CONFIG_MEM_START + t + 3 - CONFIG_START);
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////
+void saveConfig() {
+  EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
+  EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
+  EEPROM.write(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
+  for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
+    EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
+  }
+}
+
+////////////////////////////////////////////////////////////
+void artnetSend(byte* buffer, int length) {
+  udp.beginPacket(node.broadcastIP(), config.udpPort);
+  udp.write(buffer, length);
+  udp.endPacket();
+}
+
+///////////////////////////////////////////////////////////
 
 void setup() {
   loadConfig();
@@ -303,61 +360,6 @@ void loop() {
   //blink();
 }
 
-void blink() {
-  byte* d = (byte*)led_data;
-
-  for (int i = 0; i < 8 * NUM_PIXELS_OUT_RGB * 3; i++) {
-    d[i] = 30;
-  }
-  LEDS.show();
-
-  delay(300);
-
-  for (int i = 0; i <  8 * NUM_PIXELS_OUT_RGB * 3; i++) {
-    d[i] = 0;
-  }
-
-  /*
-
-  for(int i = 0; i < 8; i++) {
-    for(int j = 0; j < 128*4/3; j++) {
-      led_data[(i*128*4/3) + j] =  0x330000;//CHSV((32*i) + hue+j,192,255);
-    }
-  }*/
-  LEDS.show();
-  delay(100);
 
 
-}
-
-
-////////////////////////////////////////////////////////////
-void loadConfig() {
-  // To make sure there are settings, and they are YOURS!
-  // If nothing is found it will use the default settings.
-  if (EEPROM.read(CONFIG_MEM_START + 0) == CONFIG_VERSION[0] &&
-      EEPROM.read(CONFIG_MEM_START + 1) == CONFIG_VERSION[1] &&
-      EEPROM.read(CONFIG_MEM_START + 2) == CONFIG_VERSION[2]) {
-    for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
-      *((char*)&config + t ) = EEPROM.read(CONFIG_MEM_START + t + 3 - CONFIG_START);
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////
-void saveConfig() {
-  EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
-  EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
-  EEPROM.write(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
-  for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
-    EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
-  }
-}
-
-////////////////////////////////////////////////////////////
-void artnetSend(byte* buffer, int length) {
-  udp.beginPacket(node.broadcastIP(), config.udpPort);
-  udp.write(buffer, length);
-  udp.endPacket();
-}
 
