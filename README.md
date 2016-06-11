@@ -1,9 +1,9 @@
 # VardeLED
-Software for the VardeLED controller
+Software for the BlackLED controller
 
 Introduction
 ------------
-Code for the Teensy LC running the VardeLED controller. Compatible with Arduino IDE.
+Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Arduino IDE.
 
 Licence
 -------
@@ -11,11 +11,11 @@ The code in this repository is available under the MIT License.
 
 Installation
 ------------
-- Install [Teensyduino (1.25)](https://www.pjrc.com/teensy/td_download.html)
+- Install [Teensyduino (1.28)](https://www.pjrc.com/teensy/td_download.html)
 	- FastLED library is required when asked about libraries to install
 - Install [ArtNode](https://github.com/vertigo-dk/ArtNode) 
 	- `git clone https://github.com/vertigo-dk/ArtNode ~/Documents/Arduino/libraries/ArtNode`
-- Open Arduino IDE, select Teensy LC from Tools -> Board 
+- Open Arduino IDE, select Teensy 3.1/3.2 from Tools -> Board 
 
 Network setup
 -----------
@@ -33,7 +33,7 @@ Compatibility
 
 Known issues
 ------------
-none
+can't run more than 6 DMX universes
 
 Version history
 ------------
