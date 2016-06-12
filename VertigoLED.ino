@@ -7,6 +7,11 @@
 #include "ArtNetFrameExtension.h"
 #include "OctoWS2811.h"
 
+
+#if F_BUS < 60000000
+#error "Teensy needs to run at 120MHz to read all packets in time"
+#endif
+
 #include "TeensyMAC.h"
 #include <EEPROM.h>
 
@@ -35,7 +40,7 @@ uint8_t syncFpsMin;
 #define NUM_PIXELS_PR_STRIP 384  //3 DMX universes * 512 = 1536
                             //1536/4 = 384
                             //384/144 = 2.6 meter
-
+uint32_t dmxMemory[NUM_PIXELS_PR_STRIP*8];
 DMAMEM uint32_t displayMemory[NUM_PIXELS_PR_STRIP*8];
 uint32_t drawingMemory[NUM_PIXELS_PR_STRIP*8];
 
@@ -55,7 +60,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "VertigoLED",                           // Short name
   "VertigoLED",                           // Long name
-  15,                                    // Number of ports
+  18,                                    // Number of ports
   {PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
@@ -166,7 +171,7 @@ void setup() {
   // Open ArtNet
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
 
-  Serial.begin(250000);
+  Serial.begin(230400);
   LEDS.begin();
   LEDS.show();
 
@@ -198,14 +203,18 @@ void loop() {
                 bitSet(portSyncFlag, port);
                 uint16_t portOffset = port*128;
                 //write the dmx data to the Octo frame buffer
-                uint32_t* data = (uint32_t*) dmx->Data;
+                //uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
-                  LEDS.dmxPixel(i+portOffset, data[i]);
+                  memcpy(dmxMemory+portOffset+i, dmx->Data+i*4, 32);
+                  //LEDS.dmxPixel(i+portOffset, data[i]);
                 }        
               }
               break;}
             // OpSync  
             case 0x5200: {
+              for (int i = 0; i < 128*config.numPorts; i++) {
+                LEDS.dmxPixel(i, dmxMemory[i]);
+              }
               LEDS.show();
               syncFps++;
               //Serial.println(portSyncFlag,BIN);
