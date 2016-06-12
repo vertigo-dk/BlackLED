@@ -58,7 +58,7 @@ ArtConfig config = {
 
 boolean locateMode = 0;
 uint16_t offset;
-uint8_t portSyncFlag;
+uint16_t portSyncFlag;
 uint8_t syncFlag;
 
 unsigned long currentMillis;
@@ -82,7 +82,7 @@ void blink() {
   LEDS.show();
   delay(300);
   for (int i = 0; i <  8 * NUM_PIXELS_PR_STRIP; i++) {
-    LEDS.setPixel(i,0x00000000);  //set full white
+    LEDS.setPixel(i,0x00000000);  //set 0
   }
   LEDS.show();
   delay(100);
@@ -195,31 +195,35 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               bitSet(portSyncFlag, port);
-              //if (port >= 0 && port < config.numPorts) {
+              if (port >= 0 && port < config.numPorts) {
                 // Calculate length of DMX packet. Requires bit swap length from dmx packet
                 // int dmx_length = ((dmx->Length & 0xF) << 8) + ((dmx->Length & 0xF0) >> 8); //is this really necessary? madmapper always sends a full univers  
+                //move the data to the ports used by FastLED to avoid confusion
                 if (port<3) {
                   offset = 2688+(port*128);
                 }else {
                   offset = 1536+(port*128);
                 }
+                //write the dmx data to the Octo frame buffer
                 for (int i = 0; i < 128; i++) {
-                  LEDS.setPixel(i+offset, dmx->Data[i*4], dmx->Data[4*i+1], dmx->Data[4*i+2], dmx->Data[4*i+3]);
-                }
-                
-                //  uint32_t* dmxData = (uint32_t*) dmx->Data;               
-              //}
+                  LEDS.setPixel(i+offset, dmx->Data[4*i+1], dmx->Data[i*4], dmx->Data[4*i+2], dmx->Data[4*i+3]);
+                }             
+              }
               break;}
             // OpSync  
             case 0x5200: {
               LEDS.show();
-              if (portSyncFlag == 0b00111111) {
+              if (portSyncFlag == 63) {
                 syncFlag++;
                 portSyncFlag = 0;
                 currentMillis = millis();
               }
-              if (currentMillis-previousMillis >= 1000) {
-                fps = syncFlag;
+              if (currentMillis-previousMillis >= 990) {
+                if(currentMillis-previousMillis > 1000) {
+                  fps = syncFlag-1;
+                }else{
+                  fps = syncFlag;
+                }
                 syncFlag = 0;
                 Serial.printf("fps = %d \n",fps);
                 previousMillis = currentMillis;
