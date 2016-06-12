@@ -19,8 +19,18 @@
 EthernetUDP udp;
 uint8_t udp_buffer[600];
 
+boolean locateMode = 0;
+uint32_t portSyncFlag;
+uint32_t portSyncFlagCheck = 0;
+uint8_t syncFlag;
 
+unsigned long currentMillis;
+unsigned long previousMillis = 0;
+uint8_t dataFps;
+uint8_t syncFps;
 
+uint8_t dataFpsMin;
+uint8_t syncFpsMin;
 //////////////////////////////////// OCTO setup ///////////////////////
 #define NUM_PIXELS_PR_STRIP 384  //3 DMX universes * 512 = 1536
                             //1536/4 = 384
@@ -45,7 +55,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "VertigoLED",                           // Short name
   "VertigoLED",                           // Long name
-  6,                                    // Number of ports
+  15,                                    // Number of ports
   {PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
@@ -55,16 +65,6 @@ ArtConfig config = {
   VERSION_HI,
   VERSION_LO
 };
-
-boolean locateMode = 0;
-uint16_t offset;
-uint16_t portSyncFlag;
-uint8_t syncFlag;
-
-unsigned long currentMillis;
-unsigned long previousMillis = 0;
-uint8_t fps;
-
 ArtNodeExtended node;
 
 //------------------------------------------ udp send ---------------------
@@ -130,7 +130,7 @@ void setup() {
   saveConfig();
   loadConfig();
   for (int i = 0; i < config.numPorts; i++) {
-    config.portTypes[i] = PortTypeDmx | PortTypeOutput;
+    bitSet(portSyncFlagCheck, i);
   }
 
 #ifdef PIN_RESET
@@ -193,39 +193,33 @@ void loop() {
             // DMX packet
             case OpDmx: {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
-              int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
-              bitSet(portSyncFlag, port);
+              int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();  
               if (port >= 0 && port < config.numPorts) {
-                // Calculate length of DMX packet. Requires bit swap length from dmx packet
-                // int dmx_length = ((dmx->Length & 0xF) << 8) + ((dmx->Length & 0xF0) >> 8); //is this really necessary? madmapper always sends a full univers  
-                //move the data to the ports used by FastLED to avoid confusion
-                if (port<3) {
-                  offset = 2688+(port*128);
-                }else {
-                  offset = 1536+(port*128);
-                }
+                bitSet(portSyncFlag, port);
+                uint16_t portOffset = port*128;
                 //write the dmx data to the Octo frame buffer
+                uint32_t* data = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
-                  LEDS.setPixel(i+offset, dmx->Data[4*i+1], dmx->Data[i*4], dmx->Data[4*i+2], dmx->Data[4*i+3]);
-                }             
+                  LEDS.dmxPixel(i+portOffset, data[i]);
+                }        
               }
               break;}
             // OpSync  
             case 0x5200: {
               LEDS.show();
-              if (portSyncFlag == 63) {
+              syncFps++;
+              //Serial.println(portSyncFlag,BIN);
+              if (portSyncFlag == portSyncFlagCheck) { //check if all ports have been updated
                 syncFlag++;
                 portSyncFlag = 0;
-                currentMillis = millis();
               }
-              if (currentMillis-previousMillis >= 990) {
-                if(currentMillis-previousMillis > 1000) {
-                  fps = syncFlag-1;
-                }else{
-                  fps = syncFlag;
-                }
+              currentMillis = millis();
+              if (currentMillis-previousMillis >= 995) {
+                dataFps = syncFlag;
+                Serial.printf("total port updata rate = %d \t display FPS = %d \n",dataFps, syncFps);
+                if (dataFps<syncFps) {Serial.println("lost packet");}
                 syncFlag = 0;
-                Serial.printf("fps = %d \n",fps);
+                syncFps = 0;
                 previousMillis = currentMillis;
               }
               break;}
