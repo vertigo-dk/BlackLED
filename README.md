@@ -16,8 +16,10 @@ Installation
 - In ~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt 
 	uncoment the line 55 "teensy31.menu.speed.120opt=120 MHz optimized (overclock)"
 - In ~/Arduino.app/Contents/Java/hardware/teensy/avr/cores/teensy3/SPIFIFO.h
-	add "#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = 30 MHz" to the #if F_BUS == 60000000 section 
-	and add "#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = //(56 / 2) * ((1+1)/2) = 28 MHz" to the #if F_BUS == 56000000 section 
+	to the #if F_BUS == 60000000 section add: 
+	"#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = 30 MHz" 
+	to the #if F_BUS == 56000000 section add: 
+	"#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = //(56 / 2) * ((1+1)/2) = 28 MHz"
 - Open Arduino IDE, select Teensy 3.1/3.2 from Tools -> Board 
 	and 120 MHz optimized (overclock) from Tools -> CPU speed
 
