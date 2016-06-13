@@ -1,11 +1,16 @@
 //#define USE_OCTOWS2811
 //#include<OctoWS2811.h>
 
-#include <FastLED.h>
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
 #include "ArtNetFrameExtension.h"
+#include "OctoWS2811.h"
+
+
+#if F_BUS < 60000000
+#error "Teensy needs to run at 120MHz to read all packets in time"
+#endif
 
 #include "TeensyMAC.h"
 #include <EEPROM.h>
@@ -13,47 +18,37 @@
 #define VERSION_HI 0
 #define VERSION_LO 4
 
-// Set number of pixels (RGBW) per output
-#define NUM_PIXELS_OUT 384
-#define NUM_PIXELS_OUT_RGB int(ceil(NUM_PIXELS_OUT*4.0/3.0))
-
-//Artnet universe
-#define RGBW_PER_UNIVERSE   128
-#define RGB_PER_UNIVERSE    int(ceil(RGBW_PER_UNIVERSE*4.0/3.0))
-
 #define PIN_RESET 9
 #define PIN_DEBUG 1
 
-// ID of the settings block
-#define CONFIG_VERSION "ls1"
-
-// Tell it where to store your config data in EEPROM
-#define CONFIG_MEM_START 16
-#define CONFIG_START 17
-#define CONFIG_END 2
-
 EthernetUDP udp;
-byte udp_buffer[600];
+uint8_t udp_buffer[600];
 
-// Fucked up lookup....
-int lookup[] = {1, 0, 2, 4, 3, 5, 7, 6, 8, 10, 9, 11};
+boolean locateMode = 0;
+uint32_t portSyncFlag;
+uint32_t portSyncFlagCheck = 0;
+uint8_t syncFlag;
 
-CRGB led_data[NUM_PIXELS_OUT_RGB * 8];
-byte * led_data_ptr_1 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3;
-byte * led_data_ptr_2 = (byte*)led_data + 7 * NUM_PIXELS_OUT_RGB * 3;
-//byte * led_data_ptr_2 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3  ;
+unsigned long currentMillis;
+unsigned long previousMillis = 0;
+uint8_t dataFps;
+uint8_t syncFps;
 
+uint8_t dataFpsMin;
+uint8_t syncFpsMin;
+//////////////////////////////////// OCTO setup ///////////////////////
+#define NUM_PIXELS_PR_STRIP 384  //3 DMX universes * 512 = 1536
+                            //1536/4 = 384
+                            //384/144 = 2.6 meter
+uint32_t dmxMemory[NUM_PIXELS_PR_STRIP*8];
+DMAMEM uint32_t displayMemory[NUM_PIXELS_PR_STRIP*8];
+uint32_t drawingMemory[NUM_PIXELS_PR_STRIP*8];
 
+const int LEDconfig = WS2811_GRBW | WS2811_800kHz;
 
-//byte * led_data_ptr_2 = (byte*)led_data + 5 * NUM_PIXELS_OUT_RGB * 3;
-/*byte * led_data_ptr_3 = (byte*)led_data + 5*NUM_PIXELS_OUT_RGB * 3;
-byte * led_data_ptr_4 = (byte*)led_data + 4*NUM_PIXELS_OUT_RGB * 3;*/
+OctoWS2811 LEDS(NUM_PIXELS_PR_STRIP, displayMemory, drawingMemory, LEDconfig);
 
-bool locateMode = false;
-
-int oemCode = 0x0000; // OemUnkown
-
-////////////////////////////////////////////////////////////
+////////////////////////////////////////// Art-Net config //////////////////
 ArtConfig config = {
   {0xDE, 0xAD, 0xBE, 0x00, 0x00, 0x00}, // MAC - last 3 bytes set by Teensy
   {2, 0, 0, 1},                         // IP
@@ -65,23 +60,82 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "VertigoLED",                           // Short name
   "VertigoLED",                           // Long name
-  6,                                    // Number of ports
-  {PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput, PortTypeDmx | PortTypeOutput}, // Port types
+  18,                                    // Number of ports
+  {PortTypeDmx | PortTypeOutput,
+  PortTypeDmx | PortTypeOutput,
+  PortTypeDmx | PortTypeOutput,
+  PortTypeDmx | PortTypeOutput}, // Port types
   {0, 0, 0, 0},                         // Port input universes (0-15)
   {0, 1, 2, 3},                          // Port output universes (0-15)
   VERSION_HI,
   VERSION_LO
 };
-
 ArtNodeExtended node;
-////////////////////////////////////////////////////////////
+
+//------------------------------------------ udp send ---------------------
+void artnetSend(byte* buffer, int length) {
+  udp.beginPacket(node.broadcastIP(), config.udpPort);
+  udp.write(buffer, length);
+  udp.endPacket();
+}
+
+//////////////////////////////////////// Blink test ///////////////////////////////
+void blink() {
+  for (int i = 0; i < 8 * NUM_PIXELS_PR_STRIP; i++) {
+    LEDS.setPixel(i,0xFFFFFFFF);  //set full white
+  }
+  LEDS.show();
+  delay(300);
+  for (int i = 0; i <  8 * NUM_PIXELS_PR_STRIP; i++) {
+    LEDS.setPixel(i,0x00000000);  //set 0
+  }
+  LEDS.show();
+  delay(100);
+}
+
+////////////////////////////////////// EEPROM setup /////////////////////////////
+// ID of the settings block
+#define CONFIG_VERSION "ls1"
+
+// Tell it where to store your config data in EEPROM
+#define CONFIG_MEM_START 16
+#define CONFIG_START 17
+#define CONFIG_END 2
+
+
+
+int oemCode = 0x0000; // OemUnkown
+
+//------------------------------------------ load eeprom ---------------------
+void loadConfig() {
+  // To make sure there are settings, and they are YOURS!
+  // If nothing is found it will use the default settings.
+  if (EEPROM.read(CONFIG_MEM_START + 0) == CONFIG_VERSION[0] &&
+      EEPROM.read(CONFIG_MEM_START + 1) == CONFIG_VERSION[1] &&
+      EEPROM.read(CONFIG_MEM_START + 2) == CONFIG_VERSION[2]) {
+    for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
+      *((char*)&config + t ) = EEPROM.read(CONFIG_MEM_START + t + 3 - CONFIG_START);
+    }
+  }
+}
+
+//------------------------------------------ save eeprom ---------------------
+void saveConfig() {
+  EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
+  EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
+  EEPROM.write(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
+  for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
+    EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
+  saveConfig();
   loadConfig();
-
-  config.numPorts = 6;
   for (int i = 0; i < config.numPorts; i++) {
-    config.portTypes[i] = PortTypeDmx | PortTypeOutput;
+    bitSet(portSyncFlagCheck, i);
   }
 
 #ifdef PIN_RESET
@@ -117,247 +171,123 @@ void setup() {
   // Open ArtNet
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
 
-
-  LEDS.addLeds<WS2811_PORTD, 8>(led_data, NUM_PIXELS_OUT_RGB);
-  //LEDS.addLeds<OCTOWS2811>(led_data, NUM_PIXELS_OUT_RGB);
-  //FastLED.setDither(0);
-
-  Serial.begin(9600);
+  Serial.begin(230400);
+  LEDS.begin();
+  LEDS.show();
 
   blink();
 }
-
-////////////////////////////////////////////////////////////
-void setData(byte * dmxData, byte * ledData, int dmx_length, int offset) {
-
-  int d =  offset;
-  int bankoffset = ceil(d / 12);
- 
-  for (int i = 0; i < dmx_length; i++) {
-    int l = lookup[d % 12] + bankoffset  * 12;
-    ledData[l] = *(dmxData++);
-
-    d++; 
-    if(d%12 == 0){
-      bankoffset ++;
-    }
-  }
-
-  //memcpy(ledData+offset, dmxData, dmx_length);
-}
-
 ////////////////////////////////////////////////////////////
 void loop() {
-
   while (udp.parsePacket()) {
-    digitalWrite(PIN_DEBUG, HIGH);
-
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
     if (n >= sizeof(ArtHeader)) {
-
       ArtHeader* header = (ArtHeader*)udp_buffer;
-
-      if (memcmp(header->ID, "Art-Ext", 8) == 0) {
-        // Read the rest of the packet
-        udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
-
-        // Package Op-Code determines type of packet
-        switch (header->OpCode) {
-          // ArtNet Frame Extension
-          case OpPoll | 0x0001:
-            node.createExtendedPollReply();
-            artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
-            break;
-
-        }
-      }
-
-      // Standard ArtNet commands
-      else
-        // Check packet ID
-        if (memcmp(header->ID, "Art-Net", 8) == 0) {
-
+      // Check packet ID
+      if (memcmp(header->ID, "Art-Net", 8) == 0) {  //is Art-Net
           // Read the rest of the packet
           udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
-
           // Package Op-Code determines type of packet
           switch (header->OpCode) {
-
-            // Poll packet. Send poll reply.
-            case OpPoll:
-              node.createPollReply();
-              artnetSend(udp_buffer, sizeof(ArtPollReply));
-              break;
-
+            // Poll packet
+            case OpPoll: {
+              node.createPollReply(); //create pollReply
+              artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
+              break;}
             // DMX packet
             case OpDmx: {
-                ArtDmx* dmx = (ArtDmx*)udp_buffer;
-                int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
-                if (!locateMode && port >= 0 && port < config.numPorts) {
-                  // Calculate length of DMX packet. Requires bit swap length from dmx packet
-                  int dmx_length = ((dmx->Length & 0xF) << 8) + ((dmx->Length & 0xF0) >> 8);
-
-                  // Check if length is longer then allocated data
-                  if (dmx_length > RGBW_PER_UNIVERSE * 4) {
-                    dmx_length = RGBW_PER_UNIVERSE * 4;
-                  }
-
-                  switch (port) {
-                    case 0: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, 0);
-                        break;
-                      }
-                    case 1: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4);
-                        break;
-                      }
-                    case 2: {
-                        setData(dmx->Data, led_data_ptr_1, dmx_length, RGBW_PER_UNIVERSE * 4 * 2);
-                        break;
-                      }
-                    case 3: {
-                        setData(dmx->Data, led_data_ptr_2, dmx_length, 0);
-                        break;
-                      }
-                    case 4: {
-                        setData(dmx->Data, led_data_ptr_2, dmx_length, RGBW_PER_UNIVERSE * 4);
-                        break;
-                      }
-                    case 5: {
-                        setData(dmx->Data, led_data_ptr_2, dmx_length, RGBW_PER_UNIVERSE * 4 * 2);
-                        break;
-                      }
-                  }
-                }
+              ArtDmx* dmx = (ArtDmx*)udp_buffer;
+              int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();  
+              if (port >= 0 && port < config.numPorts) {
+                bitSet(portSyncFlag, port);
+                uint16_t portOffset = port*128;
+                //write the dmx data to the Octo frame buffer
+                //uint32_t* dmxData = (uint32_t*) dmx->Data;
+                for (int i = 0; i < 128; i++) {
+                  memcpy(dmxMemory+portOffset+i, dmx->Data+i*4, 32);
+                  //LEDS.dmxPixel(i+portOffset, data[i]);
+                }        
               }
-              break;
-            case 0x5200: { //OpSync
-                LEDS.show();
-
-                break;
+              break;}
+            // OpSync  
+            case 0x5200: {
+              for (int i = 0; i < 128*config.numPorts; i++) {
+                LEDS.dmxPixel(i, dmxMemory[i]);
               }
+              LEDS.show();
+              syncFps++;
+              //Serial.println(portSyncFlag,BIN);
+              if (portSyncFlag == portSyncFlagCheck) { //check if all ports have been updated
+                syncFlag++;
+                portSyncFlag = 0;
+              }
+              currentMillis = millis();
+              if (currentMillis-previousMillis >= 995) {
+                dataFps = syncFlag;
+                Serial.printf("total port updata rate = %d \t display FPS = %d \n",dataFps, syncFps);
+                if (dataFps<syncFps) {Serial.println("lost packet");}
+                syncFlag = 0;
+                syncFps = 0;
+                previousMillis = currentMillis;
+              }
+              break;}
             case OpAddress: {
-                T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
-
-                if (address->LongName[0] != 0)
-                  memcpy(config.longName, address->LongName, 64);
-                if (address->ShortName[0] != 0)
-                  memcpy(config.shortName, address->ShortName, 18);
-
-                if (address->NetSwitch != 0x7f)
-                  config.net = address->NetSwitch;
-
-                if (address->SubSwitch != 0x7f)
-                  config.subnet = address->SubSwitch;
-
-
-                for (int i = 0; i < 4; i++) {
-                  if (address->SwIn[i] != 0x7f)
-                    config.portAddrIn[i] = address->SwIn[i];
-                  if (address->SwOut[i] != 0x7f) {
-                    config.portAddrOut[i] = address->SwOut[i];
-                  }
-                }
-
-                if (address->Command == 0x04) {
-                  locateMode = true;
-                } else {
-                  locateMode = false;
-                }
-
-
-                node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
-
-                saveConfig();
-                loadConfig();
-                node.createPollReply();
-                artnetSend(udp_buffer, sizeof(ArtPollReply));
-                break;
+              T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
+              if (address->LongName[0] != 0) {
+                memcpy(config.longName, address->LongName, 64);
               }
+              if (address->ShortName[0] != 0) {
+                memcpy(config.shortName, address->ShortName, 18);
+              }
+              if (address->NetSwitch != 0x7f) {
+                config.net = address->NetSwitch;
+              }
+              if (address->SubSwitch != 0x7f) {
+                config.subnet = address->SubSwitch;
+              }
+              for (int i = 0; i < 4; i++) {
+                if (address->SwIn[i] != 0x7f) {
+                  config.portAddrIn[i] = address->SwIn[i];
+                }
+                if (address->SwOut[i] != 0x7f) {
+                  config.portAddrOut[i] = address->SwOut[i];
+                }
+              }
+              if (address->Command == 0x04) {
+                locateMode = true;
+              } else {
+                locateMode = false;
+              }
+              node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
+              saveConfig();
+              loadConfig();
+              node.createPollReply();
+              artnetSend(udp_buffer, sizeof(ArtPollReply));
+              break;}
             // IpProg packet
 
             // Unhandled packet
-            default:
-              break;
+            default:{
+              break;}
           }
-        }
+        }else if(memcmp(header->ID, "Art-Ext", 8) == 0) {
+          // Read the rest of the packet
+          udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
+          // Package Op-Code determines type of packet
+          switch (header->OpCode) {
+          // ArtNet Frame Extension
+          case OpPoll | 0x0001: {
+            node.createExtendedPollReply();
+            artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
+            break;}
+          }
+       }
     }
     digitalWrite(PIN_DEBUG, LOW);
-
-
-  }
-
-  if (locateMode) {
-    /*byte* d = (byte*)led_data;
-    for (int i = 0; i < NUM_RGB_LEDS_4 * 3; i++) {
-      d[i * 4] = 0;
-      d[i * 4 + 1] = (sin(10 + i + millis() / 100.0) + 1) * 128.0;
-      d[i * 4 + 2] = 0;
-      d[i * 4 + 3] = (sin(i + millis() / 100.0) + 1) * 128.0;
-    }
-    LEDS.show();*/
-
-  }
-
-  //blink();
-}
-
-void blink() {
-  byte* d = (byte*)led_data;
-
-  for (int i = 0; i < 8 * NUM_PIXELS_OUT_RGB * 3; i++) {
-    d[i] = 30;
-  }
-  LEDS.show();
-
-  delay(300);
-
-  for (int i = 0; i <  8 * NUM_PIXELS_OUT_RGB * 3; i++) {
-    d[i] = 0;
-  }
-
-  /*
-
-  for(int i = 0; i < 8; i++) {
-    for(int j = 0; j < 128*4/3; j++) {
-      led_data[(i*128*4/3) + j] =  0x330000;//CHSV((32*i) + hue+j,192,255);
-    }
-  }*/
-  LEDS.show();
-  delay(100);
-
-
-}
-
-
-////////////////////////////////////////////////////////////
-void loadConfig() {
-  // To make sure there are settings, and they are YOURS!
-  // If nothing is found it will use the default settings.
-  if (EEPROM.read(CONFIG_MEM_START + 0) == CONFIG_VERSION[0] &&
-      EEPROM.read(CONFIG_MEM_START + 1) == CONFIG_VERSION[1] &&
-      EEPROM.read(CONFIG_MEM_START + 2) == CONFIG_VERSION[2]) {
-    for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
-      *((char*)&config + t ) = EEPROM.read(CONFIG_MEM_START + t + 3 - CONFIG_START);
-    }
   }
 }
 
-////////////////////////////////////////////////////////////
-void saveConfig() {
-  EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
-  EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
-  EEPROM.write(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
-  for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
-    EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
-  }
-}
 
-////////////////////////////////////////////////////////////
-void artnetSend(byte* buffer, int length) {
-  udp.beginPacket(node.broadcastIP(), config.udpPort);
-  udp.write(buffer, length);
-  udp.endPacket();
-}
+
 

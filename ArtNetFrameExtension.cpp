@@ -22,7 +22,7 @@ uint16_t ArtNodeExtended::getAddress(uint8_t subUni, uint8_t net) {
   return subUni + (net << 8);
 }
 uint16_t ArtNodeExtended::getStartAddress() {
-  return config->portAddrOut[0] + (config->subnet * 16);
+  return config->portAddrOut[0] + (config->subnet << 4) + (config->net << 8);
 }
 
 
@@ -49,8 +49,9 @@ void ArtNodeExtended::createExtendedPollReply() {
 
   uint16_t * addresses = (uint16_t*)(buffer + sizeof(T_Ext_ArtPollReply));
   for (int i = 0; i < config->numPorts; i++) {
-    uint16_t addr = config->portAddrOut[0] + (config->subnet * 16) + i;
-    addresses[i] = addr ;
+    uint16_t addr = i + (config->subnet << 4) + (config->net << 8);
+    //Serial.printf("addr %d = %d", i, addr);
+    addresses[i] = addr;
     //addresses[i*2+1] = 1;//addr >> 8;
   }
 
