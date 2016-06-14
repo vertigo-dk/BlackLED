@@ -1,6 +1,9 @@
 //#define USE_OCTOWS2811
 //#include<OctoWS2811.h>
 
+#define numRealPortOut 6
+#define numArtNetPort numRealPortOut*3
+
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
@@ -19,7 +22,6 @@
 #define VERSION_LO 4
 
 #define PIN_RESET 9
-#define PIN_DEBUG 1
 
 EthernetUDP udp;
 uint8_t udp_buffer[600];
@@ -58,9 +60,9 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "VertigoLED",                           // Short name
-  "VertigoLED",                           // Long name
-  18,                                    // Number of ports
+  "BlackLED6",                           // Short name
+  "BlackLED 6 port",                           // Long name
+  numArtNetPort,                                    // Number of ports
   {PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
@@ -146,9 +148,6 @@ void setup() {
   delay(150);
 #endif
 
-  // Setup DEBUG pin
-  pinMode(PIN_DEBUG, OUTPUT);
-
   // Read MAC address
   mac_addr mac;
   for (int i = 3; i < 6; i++) {
@@ -171,7 +170,6 @@ void setup() {
   // Open ArtNet
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
 
-  Serial.begin(230400);
   LEDS.begin();
   LEDS.show();
 
@@ -198,26 +196,21 @@ void loop() {
             // DMX packet
             case OpDmx: {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
-              int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();  
+              int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
                 bitSet(portSyncFlag, port);
                 uint16_t portOffset = port*128;
                 //write the dmx data to the Octo frame buffer
-                //uint32_t* dmxData = (uint32_t*) dmx->Data;
+                uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
-                  memcpy(dmxMemory+portOffset+i, dmx->Data+i*4, 32);
-                  //LEDS.dmxPixel(i+portOffset, data[i]);
-                }        
+                  LEDS.dmxPixel(i+portOffset, dmxData[i]);
+                }
               }
               break;}
-            // OpSync  
+            // OpSync
             case 0x5200: {
-              for (int i = 0; i < 128*config.numPorts; i++) {
-                LEDS.dmxPixel(i, dmxMemory[i]);
-              }
               LEDS.show();
               syncFps++;
-              //Serial.println(portSyncFlag,BIN);
               if (portSyncFlag == portSyncFlagCheck) { //check if all ports have been updated
                 syncFlag++;
                 portSyncFlag = 0;
@@ -225,8 +218,6 @@ void loop() {
               currentMillis = millis();
               if (currentMillis-previousMillis >= 995) {
                 dataFps = syncFlag;
-                Serial.printf("total port updata rate = %d \t display FPS = %d \n",dataFps, syncFps);
-                if (dataFps<syncFps) {Serial.println("lost packet");}
                 syncFlag = 0;
                 syncFps = 0;
                 previousMillis = currentMillis;
@@ -284,10 +275,5 @@ void loop() {
           }
        }
     }
-    digitalWrite(PIN_DEBUG, LOW);
   }
 }
-
-
-
-
