@@ -245,6 +245,9 @@ void loop() {
                   config.portAddrOut[i] = address->SwOut[i];
                 }
               }
+              for (int i = 1; i < config.numPorts-1; i++) { //for now we only do sequential port addr. 
+                config.portAddrOut[i] = config.portAddrOut[0]+i;
+              }
               if (address->Command == 0x04) {
                 locateMode = true;
               } else {
@@ -255,6 +258,8 @@ void loop() {
               loadConfig();
               node.createPollReply();
               artnetSend(udp_buffer, sizeof(ArtPollReply));
+              node.createExtendedPollReply();
+              artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
               break;}
             // IpProg packet
 
