@@ -1,8 +1,19 @@
 //#define USE_OCTOWS2811
 //#include<OctoWS2811.h>
 
+//initial user defined settings
 #define numRealPortOut 6
-#define numArtNetPort numRealPortOut*3
+#define maxNumPixelsPerOut 360
+#define numColorPerLED 4
+
+// constants derived from user defined
+#define numDMXchannels maxNumPixelsPerOut * numRealPortOut * numColorPerLED
+#if maxNumPixelsPerOut % 512 != 0
+  #define DMXadjustedPixelcout (((maxNumPixelsPerOut*numColorPerLED)/512+1)*512)/numColorPerLED
+#else
+  #define DMXadjustedPixelcout (((maxNumPixelsPerOut*numColorPerLED)/512)*512)/numColorPerLED
+#endif
+#define numArtNetPort (numRealPortOut * DMXadjustedPixelcout * numColorPerLED)/512
 
 #include <SPI.h>
 #include <Ethernet.h>
@@ -39,9 +50,7 @@ uint8_t syncFps;
 uint8_t dataFpsMin;
 uint8_t syncFpsMin;
 //////////////////////////////////// OCTO setup ///////////////////////
-#define NUM_PIXELS_PR_STRIP 384  //3 DMX universes * 512 = 1536
-                            //1536/4 = 384
-                            //384/144 = 2.6 meter
+#define NUM_PIXELS_PR_STRIP DMXadjustedPixelcout
 uint32_t dmxMemory[NUM_PIXELS_PR_STRIP*8];
 DMAMEM uint32_t displayMemory[NUM_PIXELS_PR_STRIP*8];
 uint32_t drawingMemory[NUM_PIXELS_PR_STRIP*8];
@@ -61,8 +70,8 @@ ArtConfig config = {
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "BlackLED6",                           // Short name
-  "BlackLED 6 port",                           // Long name
-  numArtNetPort,                                    // Number of ports
+  "BlackLED 6 port",                     // Long name
+  numArtNetPort,                         // Number of ports
   {PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
@@ -233,12 +242,12 @@ void loop() {
               }
               if (address->NetSwitch != 0x7f) {               // Use value 0x7f for no change.
                 if (bitRead(address->NetSwitch,7) == true) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
-                  config.net = address->NetSwitch && 0x7F; 
+                  config.net = address->NetSwitch && 0x7F;
                 }
               }
               if (address->SubSwitch != 0x7f) {               // Use value 0x7f for no change.
                 if (bitRead(address->SubSwitch,7) == true) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
-                  config.net = address->NetSwitch && 0x7F; 
+                  config.net = address->NetSwitch && 0x7F;
                 }
               }
               for (int i = 0; i < 4; i++) {
@@ -249,7 +258,7 @@ void loop() {
                   config.portAddrOut[i] = address->SwOut[i];
                 }
               }
-            /*  for (int i = 1; i < config.numPorts; i++) { //for now we only do sequential port addr. 
+            /*  for (int i = 1; i < config.numPorts; i++) { //for now we only do sequential port addr.
                 config.portAddrOut[i] = config.portAddrOut[0]+i;
               }*/
               if (address->Command == 0x04) {
