@@ -50,7 +50,7 @@ uint8_t syncFps;
 uint8_t dataFpsMin;
 uint8_t syncFpsMin;
 //////////////////////////////////// OCTO setup ///////////////////////
-#define NUM_PIXELS_PR_STRIP DMXadjustedPixelcout
+#define NUM_PIXELS_PR_STRIP 384
 uint32_t dmxMemory[NUM_PIXELS_PR_STRIP*8];
 DMAMEM uint32_t displayMemory[NUM_PIXELS_PR_STRIP*8];
 uint32_t drawingMemory[NUM_PIXELS_PR_STRIP*8];
@@ -71,7 +71,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "BlackLED6",                           // Short name
   "BlackLED 6 port",                     // Long name
-  numArtNetPort,                         // Number of ports
+  18,                         // Number of ports
   {PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
@@ -247,7 +247,7 @@ void loop() {
               }
               if (address->SubSwitch != 0x7f) {               // Use value 0x7f for no change.
                 if (bitRead(address->SubSwitch,7) == true) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
-                  config.net = address->NetSwitch && 0x7F;
+                  config.subnet = address->SubSwitch && 0x7F;
                 }
               }
               for (int i = 0; i < 4; i++) {
