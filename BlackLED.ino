@@ -8,11 +8,13 @@
 
 // constants derived from user defined
 #define numDMXchannels maxNumPixelsPerOut * numRealPortOut * numColorPerLED
+
 #if maxNumPixelsPerOut % 512 != 0
   #define DMXadjustedPixelcout (((maxNumPixelsPerOut*numColorPerLED)/512+1)*512)/numColorPerLED
 #else
   #define DMXadjustedPixelcout (((maxNumPixelsPerOut*numColorPerLED)/512)*512)/numColorPerLED
 #endif
+
 #define numArtNetPort (numRealPortOut * DMXadjustedPixelcout * numColorPerLED)/512
 
 #include <SPI.h>
@@ -30,7 +32,7 @@
 #include <EEPROM.h>
 
 #define VERSION_HI 0
-#define VERSION_LO 4
+#define VERSION_LO 6
 
 #define PIN_RESET 9
 
@@ -49,6 +51,7 @@ uint8_t syncFps;
 
 uint8_t dataFpsMin;
 uint8_t syncFpsMin;
+
 //////////////////////////////////// OCTO setup ///////////////////////
 #define NUM_PIXELS_PR_STRIP 384
 uint32_t dmxMemory[NUM_PIXELS_PR_STRIP*8];
@@ -69,8 +72,8 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "BlackLED6",                           // Short name
-  "BlackLED 6 port",                     // Long name
+  "BlackLED_6",                           // Short name
+  "BlackLED_6_port",                     // Long name
   18,                         // Number of ports
   {PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
@@ -143,7 +146,7 @@ void saveConfig() {
 //////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  saveConfig();
+  //saveConfig();
   loadConfig();
   for (int i = 0; i < config.numPorts; i++) {
     bitSet(portSyncFlagCheck, i);
@@ -197,11 +200,13 @@ void loop() {
           udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
           // Package Op-Code determines type of packet
           switch (header->OpCode) {
+            
             // Poll packet
             case OpPoll: {
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               break;}
+              
             // DMX packet
             case OpDmx: {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
@@ -216,6 +221,7 @@ void loop() {
                 }
               }
               break;}
+              
             // OpSync
             case 0x5200: {
               LEDS.show();
@@ -232,7 +238,12 @@ void loop() {
                 previousMillis = currentMillis;
               }
               break;}
+
+            // OpAddress 
             case OpAddress: {
+             // config.net = 0; // Strange Bugfix;
+            //  config.subnet = 0;
+              
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
               if (address->LongName[0] != 0) {
                 memcpy(config.longName, address->LongName, 64);
@@ -240,22 +251,24 @@ void loop() {
               if (address->ShortName[0] != 0) {
                 memcpy(config.shortName, address->ShortName, 18);
               }
-              if (address->NetSwitch != 0x7f) {               // Use value 0x7f for no change.
-                if (bitRead(address->NetSwitch,7) == true) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
-                  config.net = address->NetSwitch && 0x7F;
-                }
+              if (address->NetSwitch != 0x7F) {               // Use value 0x7f for no change.
+//                if ((address->NetSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
+                  config.net = address->NetSwitch & 0x7F;
+//                }
               }
-              if (address->SubSwitch != 0x7f) {               // Use value 0x7f for no change.
-                if (bitRead(address->SubSwitch,7) == true) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
-                  config.subnet = address->SubSwitch && 0x7F;
-                }
+              if (address->SubSwitch != 0x7F) {               // Use value 0x7f for no change.
+//                if ((address->SubSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
+                  config.subnet = address->SubSwitch & 0x7F;
+//                }
               }
               for (int i = 0; i < 4; i++) {
-                if (address->SwIn[i] != 0x7f) {
-                  config.portAddrIn[i] = address->SwIn[i];
+                if (address->SwIn[i] != 0x7F) {
+                  config.portAddrIn[i] = address->SwIn[i] & 0x7F;
                 }
-                if (address->SwOut[i] != 0x7f) {
-                  config.portAddrOut[i] = address->SwOut[i];
+                if (address->SwOut[i] != 0x7F) {
+//                  if ((address->SwOut[i] & 0x80) == 0x80) {
+                    config.portAddrOut[i] = address->SwOut[i]  & 0x7F;
+//                  }
                 }
               }
             /*  for (int i = 1; i < config.numPorts; i++) { //for now we only do sequential port addr.
@@ -267,8 +280,8 @@ void loop() {
                 locateMode = false;
               }
               node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
-              saveConfig();
-              loadConfig();
+              //saveConfig();
+              //loadConfig();
               node.createPollReply();
               artnetSend(udp_buffer, sizeof(ArtPollReply));
               node.createExtendedPollReply();

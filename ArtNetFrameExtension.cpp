@@ -50,9 +50,8 @@ void ArtNodeExtended::createExtendedPollReply() {
   uint16_t * addresses = (uint16_t*)(buffer + sizeof(T_Ext_ArtPollReply));
   for (int i = 0; i < config->numPorts; i++) {
     uint16_t addr = config->portAddrOut[0]+ i + (config->subnet << 4) + (config->net << 8);
-    //Serial.printf("addr %d = %d", i, addr);
+//    uint16_t addr = config->portAddrOut[0]+ i + (config->subnet * 16) + (config->net * 256);
     addresses[i] = addr;
-    //addresses[i*2+1] = 1;//addr >> 8;
   }
 
   /*
