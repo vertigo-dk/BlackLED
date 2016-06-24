@@ -84,6 +84,7 @@ ArtConfig config = {
   VERSION_HI,
   VERSION_LO
 };
+
 ArtNodeExtended node;
 
 //------------------------------------------ udp send ---------------------
@@ -115,8 +116,6 @@ void blink() {
 #define CONFIG_MEM_START 16
 #define CONFIG_START 17
 #define CONFIG_END 2
-
-
 
 int oemCode = 0x0000; // OemUnkown
 
@@ -241,11 +240,9 @@ void loop() {
 
             // OpAddress 
             case OpAddress: {
-
-//              config.net = 0;
-//              config.subnet = 0;
               
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
+              
               if (address->LongName[0] != 0) {
                 memcpy(config.longName, address->LongName, 64);
               }
@@ -278,7 +275,7 @@ void loop() {
               } else {
                 locateMode = false;
               }
-             // node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
+              node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
               saveConfig();
               loadConfig();
               node.createPollReply();
@@ -286,12 +283,13 @@ void loop() {
               node.createExtendedPollReply();
               artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
               break;}
-            // IpProg packet
 
             // Unhandled packet
             default:{
               break;}
           }
+
+          // answer routine for Art-Net Extended
         }else if(memcmp(header->ID, "Art-Ext", 8) == 0) {
           // Read the rest of the packet
           udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
