@@ -1,28 +1,12 @@
-//#define USE_OCTOWS2811
-//#include<OctoWS2811.h>
-
 //initial user defined settings
-#define numRealPortOut 6
-#define maxNumPixelsPerOut 360
-#define numColorPerLED 4
-
-// constants derived from user defined
-#define numDMXchannels maxNumPixelsPerOut * numRealPortOut * numColorPerLED
-
-#if maxNumPixelsPerOut % 512 != 0
-  #define DMXadjustedPixelcout (((maxNumPixelsPerOut*numColorPerLED)/512+1)*512)/numColorPerLED
-#else
-  #define DMXadjustedPixelcout (((maxNumPixelsPerOut*numColorPerLED)/512)*512)/numColorPerLED
-#endif
-
-#define numArtNetPort (numRealPortOut * DMXadjustedPixelcout * numColorPerLED)/512
+#define NUM_OF_PORTS_OUT 2
+#define NUM_OF_UNIVERSES_PER_OUT 3
 
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
 #include "ArtNetFrameExtension.h"
 #include "OctoWS2811.h"
-
 
 #if F_BUS < 60000000
 #error "Teensy needs to run at 120MHz to read all packets in time"
@@ -74,7 +58,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "BlackLED_6",                           // Short name
   "BlackLED_6_port",                     // Long name
-  18,                         // Number of ports
+  NUM_OF_PORTS_OUT*NUM_OF_UNIVERSES_PER_OUT, // Number of ports
   {PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
   PortTypeDmx | PortTypeOutput,
