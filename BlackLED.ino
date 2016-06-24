@@ -241,8 +241,9 @@ void loop() {
 
             // OpAddress 
             case OpAddress: {
-             // config.net = 0; // Strange Bugfix;
-            //  config.subnet = 0;
+
+//              config.net = 0;
+//              config.subnet = 0;
               
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
               if (address->LongName[0] != 0) {
@@ -252,36 +253,34 @@ void loop() {
                 memcpy(config.shortName, address->ShortName, 18);
               }
               if (address->NetSwitch != 0x7F) {               // Use value 0x7f for no change.
-//                if ((address->NetSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
+                if ((address->NetSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
                   config.net = address->NetSwitch & 0x7F;
-//                }
+                }
               }
               if (address->SubSwitch != 0x7F) {               // Use value 0x7f for no change.
-//                if ((address->SubSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
+                if ((address->SubSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
                   config.subnet = address->SubSwitch & 0x7F;
-//                }
+                }
               }
               for (int i = 0; i < 4; i++) {
                 if (address->SwIn[i] != 0x7F) {
                   config.portAddrIn[i] = address->SwIn[i] & 0x7F;
                 }
                 if (address->SwOut[i] != 0x7F) {
-//                  if ((address->SwOut[i] & 0x80) == 0x80) {
-                    config.portAddrOut[i] = address->SwOut[i]  & 0x7F;
-//                  }
+                  if ((address->SwOut[i] & 0x80) == 0x80) {
+                    config.portAddrOut[i] = address->SwOut[i] & 0x7F;
+                  }
                 }
               }
-            /*  for (int i = 1; i < config.numPorts; i++) { //for now we only do sequential port addr.
-                config.portAddrOut[i] = config.portAddrOut[0]+i;
-              }*/
+
               if (address->Command == 0x04) {
                 locateMode = true;
               } else {
                 locateMode = false;
               }
-              node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
-              //saveConfig();
-              //loadConfig();
+             // node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
+              saveConfig();
+              loadConfig();
               node.createPollReply();
               artnetSend(udp_buffer, sizeof(ArtPollReply));
               node.createExtendedPollReply();
