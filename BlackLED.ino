@@ -1,5 +1,5 @@
 //initial user defined settings
-#define NUM_OF_PORTS_OUT 2
+#define NUM_OF_OUTPUTS 6
 #define NUM_OF_UNIVERSES_PER_OUT 3
 
 #include <SPI.h>
@@ -16,7 +16,7 @@
 #include <EEPROM.h>
 
 #define VERSION_HI 0
-#define VERSION_LO 6
+#define VERSION_LO 7
 
 #define PIN_RESET 9
 
@@ -30,17 +30,19 @@ uint8_t syncFlag;
 
 unsigned long currentMillis;
 unsigned long previousMillis = 0;
-uint8_t dataFps;
-uint8_t syncFps;
 
-uint8_t dataFpsMin;
-uint8_t syncFpsMin;
+// variables for the node.report
+float tempVal = 0;
+float fps = 0;
+float avgUniUpdated = 0;
+uint8_t numUniUpdated = 0;
+
 
 //////////////////////////////////// OCTO setup ///////////////////////
 #define NUM_PIXELS_PR_STRIP 384
-uint32_t dmxMemory[NUM_PIXELS_PR_STRIP*8];
-DMAMEM uint32_t displayMemory[NUM_PIXELS_PR_STRIP*8];
-uint32_t drawingMemory[NUM_PIXELS_PR_STRIP*8];
+uint32_t dmxMemory[NUM_PIXELS_PR_STRIP * 8];
+DMAMEM uint32_t displayMemory[NUM_PIXELS_PR_STRIP * 8];
+uint32_t drawingMemory[NUM_PIXELS_PR_STRIP * 8];
 
 const int LEDconfig = WS2811_GRBW | WS2811_800kHz;
 
@@ -58,11 +60,12 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "BlackLED_6",                           // Short name
   "BlackLED_6_port",                     // Long name
-  NUM_OF_PORTS_OUT*NUM_OF_UNIVERSES_PER_OUT, // Number of ports
-  {PortTypeDmx | PortTypeOutput,
-  PortTypeDmx | PortTypeOutput,
-  PortTypeDmx | PortTypeOutput,
-  PortTypeDmx | PortTypeOutput}, // Port types
+  NUM_OF_OUTPUTS * NUM_OF_UNIVERSES_PER_OUT, // Number of ports
+  { PortTypeDmx | PortTypeOutput,
+    PortTypeDmx | PortTypeOutput,
+    PortTypeDmx | PortTypeOutput,
+    PortTypeDmx | PortTypeOutput
+  }, // Port types
   {0, 0, 0, 0},                         // Port input universes (0-15)
   {0, 1, 2, 3},                          // Port output universes (0-15)
   VERSION_HI,
@@ -81,12 +84,12 @@ void artnetSend(byte* buffer, int length) {
 //////////////////////////////////////// Blink test ///////////////////////////////
 void blink() {
   for (int i = 0; i < 8 * NUM_PIXELS_PR_STRIP; i++) {
-    LEDS.setPixel(i,0xFFFFFFFF);  //set full white
+    LEDS.setPixel(i, 0xFFFFFFFF); //set full white
   }
   LEDS.show();
   delay(300);
   for (int i = 0; i <  8 * NUM_PIXELS_PR_STRIP; i++) {
-    LEDS.setPixel(i,0x00000000);  //set 0
+    LEDS.setPixel(i, 0x00000000); //set 0
   }
   LEDS.show();
   delay(100);
@@ -169,6 +172,11 @@ void setup() {
   LEDS.show();
 
   blink();
+
+  // to read internal temperature
+  analogReference(INTERNAL);
+  analogReadResolution(12);
+
 }
 ////////////////////////////////////////////////////////////
 void loop() {
@@ -179,54 +187,61 @@ void loop() {
       ArtHeader* header = (ArtHeader*)udp_buffer;
       // Check packet ID
       if (memcmp(header->ID, "Art-Net", 8) == 0) {  //is Art-Net
-          // Read the rest of the packet
-          udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
-          // Package Op-Code determines type of packet
-          switch (header->OpCode) {
-            
-            // Poll packet
-            case OpPoll: {
+        // Read the rest of the packet
+        udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
+        // Package Op-Code determines type of packet
+        switch (header->OpCode) {
+
+          // Poll packet
+          case OpPoll: {
+              //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
+              //if(poll->TalkToMe & 0x2){
+
+              float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, NUM_OF_UNIVERSES_PER_OUT, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
-              break;}
-              
-            // DMX packet
-            case OpDmx: {
+              //}
+              break;
+            }
+
+          // DMX packet
+          case OpDmx: {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                bitSet(portSyncFlag, port);
-                uint16_t portOffset = port*128;
+                uint16_t portOffset = port * 128;
                 //write the dmx data to the Octo frame buffer
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
-                  LEDS.dmxPixel(i+portOffset, dmxData[i]);
+                  LEDS.dmxPixel(i + portOffset, dmxData[i]);
                 }
+                numUniUpdated++;
               }
-              break;}
-              
-            // OpSync
-            case 0x5200: {
-              LEDS.show();
-              syncFps++;
-              if (portSyncFlag == portSyncFlagCheck) { //check if all ports have been updated
-                syncFlag++;
-                portSyncFlag = 0;
-              }
-              currentMillis = millis();
-              if (currentMillis-previousMillis >= 995) {
-                dataFps = syncFlag;
-                syncFlag = 0;
-                syncFps = 0;
-                previousMillis = currentMillis;
-              }
-              break;}
+              break;
+            }
 
-            // OpAddress 
-            case OpAddress: {
-              
+          // OpSync
+          case 0x5200: {
+              LEDS.show();
+
+              // calculate framerate
+              currentMillis = millis();
+              fps = 1 / ((currentMillis - previousMillis) * 0.001);
+              previousMillis = currentMillis;
+
+              // calculate average universes Updated
+              avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
+              numUniUpdated = 0;
+
+              break;
+            }
+
+          // OpAddress
+          case OpAddress: {
+
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
-              
+
               if (address->LongName[0] != 0) {
                 memcpy(config.longName, address->LongName, 64);
               }
@@ -264,28 +279,34 @@ void loop() {
               loadConfig();
               node.createPollReply();
               artnetSend(udp_buffer, sizeof(ArtPollReply));
-              node.createExtendedPollReply();
-              artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
-              break;}
+              //node.createExtendedPollReply();
+              //artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
+              break;
+            }
 
-            // Unhandled packet
-            default:{
-              break;}
-          }
+          // Unhandled packet
+          default: {
+              break;
+            }
+        }
 
-          // answer routine for Art-Net Extended
-        }else if(memcmp(header->ID, "Art-Ext", 8) == 0) {
-          // Read the rest of the packet
-          udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
-          // Package Op-Code determines type of packet
-          switch (header->OpCode) {
+        // answer routine for Art-Net Extended
+      } else if (memcmp(header->ID, "Art-Ext", 8) == 0) {
+        // Read the rest of the packet
+        udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
+        // Package Op-Code determines type of packet
+        switch (header->OpCode) {
           // ArtNet Frame Extension
           case OpPoll | 0x0001: {
-            node.createExtendedPollReply();
-            artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
-            break;}
-          }
-       }
+              node.createExtendedPollReply();
+              artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
+              break;
+            }
+        }
+      }
     }
   }
+
+  // read temperature value
+  tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
 }

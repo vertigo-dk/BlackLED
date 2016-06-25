@@ -11,6 +11,7 @@ The code in this repository is available under the MIT License.
 
 Installation
 ------------
+- Install [Arduino (1.68)](https://www.arduino.cc/en/Main/OldSoftwareReleases#previous)
 - Install [Teensyduino (1.28)](https://www.pjrc.com/teensy/td_download.html)
 - Install [ArtNode](https://github.com/vertigo-dk/ArtNode) 
 - In ~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt 

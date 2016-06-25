@@ -89,8 +89,12 @@ void ArtNodeExtended::createPollReply() {
   reply->NetSwitch = config->net;
   reply->SubSwitch = config->subnet;
 
+
   strcpy((char*)reply->ShortName, config->shortName);
   strcpy((char*)reply->LongName, config->longName);
+  
+  strcpy((char*)reply->NodeReport, pollReport);
+  
 
   int numPorts = config->numPorts;
   if (numPorts > 4) numPorts = 4;
