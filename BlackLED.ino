@@ -10,13 +10,13 @@
 
 #if F_BUS < 60000000
 #error "Teensy needs to run at 120MHz to read all packets in time"
-#endif
+#endif 
 
 #include "TeensyMAC.h"
 #include <EEPROM.h>
 
 #define VERSION_HI 0
-#define VERSION_LO 7
+#define VERSION_LO 8
 
 #define PIN_RESET 9
 
@@ -28,15 +28,13 @@ uint32_t portSyncFlag;
 uint32_t portSyncFlagCheck = 0;
 uint8_t syncFlag;
 
-unsigned long currentMillis;
-unsigned long previousMillis = 0;
-
 // variables for the node.report
 float tempVal = 0;
 float fps = 0;
 float avgUniUpdated = 0;
 uint8_t numUniUpdated = 0;
-
+unsigned long currentMillis = 0;
+unsigned long previousMillis = 0;
 
 //////////////////////////////////// OCTO setup ///////////////////////
 #define NUM_PIXELS_PR_STRIP 384
@@ -227,7 +225,11 @@ void loop() {
 
               // calculate framerate
               currentMillis = millis();
-              fps = 1 / ((currentMillis - previousMillis) * 0.001);
+              if(currentMillis > previousMillis){
+                fps = 1 / ((currentMillis - previousMillis) * 0.001);
+              } else {
+                fps = 0;
+              }
               previousMillis = currentMillis;
 
               // calculate average universes Updated
@@ -260,7 +262,9 @@ void loop() {
               }
               for (int i = 0; i < 4; i++) {
                 if (address->SwIn[i] != 0x7F) {
-                  config.portAddrIn[i] = address->SwIn[i] & 0x7F;
+                  if ((address->SwIn[i] & 0x80) == 0x80) {
+                    config.portAddrIn[i] = address->SwIn[i] & 0x7F;
+                  }
                 }
                 if (address->SwOut[i] != 0x7F) {
                   if ((address->SwOut[i] & 0x80) == 0x80) {
