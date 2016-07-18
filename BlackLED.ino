@@ -1,5 +1,5 @@
 //initial user defined settings
-#define NUM_OF_OUTPUTS 6
+#define NUM_OF_OUTPUTS 2
 #define NUM_OF_UNIVERSES_PER_OUT 3
 
 #include <SPI.h>
