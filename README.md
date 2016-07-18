@@ -49,4 +49,4 @@ at 18 DMX universes it will begin to drop packages
 Version history
 ------------
 
-### v0.5.1
+### v0.8
