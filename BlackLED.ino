@@ -4,11 +4,11 @@
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 2
-#define MAX_NUM_LED_PER_OUTPUT 384
-#define NUM_CHANNEL_PER_LED 4
+#define MAX_NUM_LED_PER_OUTPUT 121
+#define NUM_CHANNEL_PER_LED 3
 
-//#define _use_FastLED  //for all types of chips but only 3 channel
-#define _use_octoWS2811 //for all WS2811 type chips
+#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
+//#define _use_octoWS2811 //for all WS2811 type chips
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -17,7 +17,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define num_channel_per_output MAX_NUM_LED_PER_OUTPUT*NUM_CHANNEL_PER_LED
 #if num_channel_per_output%512 > 0
-#define NUM_OF_UNIVERSES_PER_OUT (num_channel_per_output/512)+1
+#define num_universes_per_output (num_channel_per_output/512)+1
 #else 
 #define num_universes_per_output num_channel_per_output/512
 #endif
@@ -31,10 +31,19 @@
 // settings error check
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#ifdef _use_FastLED
+#if NUM_OF_OUTPUTS > 2
+#error  "max 2 outputs for FastLED. if you want more it is easy to implement"
+#endif
+#ifdef _use_octoWS2811
+#error "only use one led controlle type"
+#endif
+#endif
 
 #ifdef _use_octoWS2811
-#ifdef _use_FastLED
-#error "only use one led controlle type"
+#warning "using less than 8 outputs, octoWS2811 will stil runs 8 outputs"
+#if NUM_OF_OUTPUTS > 8
+#error "octoWS2811 only runs 8 outputs"
 #endif
 #endif
 
@@ -66,7 +75,16 @@
 #include <Ethernet.h>
 #include <ArtNode.h>
 #include "ArtNetFrameExtension.h"
+
+#ifdef _use_octoWS2811
 #include "OctoWS2811.h"
+#endif
+#ifdef _use_FastLED
+uint32_t portSyncFlag;
+uint32_t portSyncFlagCheck = 0;
+uint8_t syncFlag;
+#include "FastLED.h"
+#endif
 
 #include "TeensyMAC.h"
 #include <EEPROM.h>
@@ -80,9 +98,6 @@ EthernetUDP udp;
 uint8_t udp_buffer[600];
 
 boolean locateMode = 0;
-uint32_t portSyncFlag;
-uint32_t portSyncFlagCheck = 0;
-uint8_t syncFlag;
 
 // variables for the node.report
 float tempVal = 0;
@@ -107,7 +122,9 @@ const int LEDconfig = WS2811_GRBW | WS2811_800kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 #endif
+
 #ifdef _use_FastLED
+CRGB leds[num_led_per_output * NUM_OF_OUTPUTS];
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -173,6 +190,11 @@ void blink() {
   delay(100);
   #endif
   #ifdef _use_FastLED
+  FastLED.clear();
+  FastLED.showColor(0xFFFFFF);
+  delay(300);
+  FastLED.clear();
+  delay(100);
   #endif
 }
 
@@ -234,9 +256,6 @@ void saveConfig() {
 void setup() {
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   loadConfig();
-  for (int i = 0; i < config.numPorts; i++) {
-    bitSet(portSyncFlagCheck, i);
-  }
 
 #ifdef PIN_RESET
   pinMode(PIN_RESET, OUTPUT);
@@ -268,8 +287,16 @@ void setup() {
   // Open ArtNet
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
 
+  #ifdef _use_octoWS2811
   LEDS.begin();
   LEDS.show();
+  #endif
+  #ifdef _use_FastLED
+  FastLED.addLeds<LPD8806, 2, 6, RGB, DATA_RATE_KHZ(12)>(leds, num_led_per_output).setCorrection( UncorrectedColor );
+  #if NUM_OF_OUTPUTS > 1
+  FastLED.addLeds<LPD8806, 14, 20, RGB, DATA_RATE_KHZ(12)>(leds, num_led_per_output, num_led_per_output).setCorrection( UncorrectedColor );
+  #endif
+  #endif
 
   blink();
 
@@ -318,13 +345,17 @@ void loop() {
               if (port >= 0 && port < config.numPorts) {
                 uint16_t portOffset = port * 128;
                 //write the dmx data to the Octo frame buffer
-                uint32_t* dmxData = (uint32_t*) dmx->Data;
                 #ifdef _use_octoWS2811
+                uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
                   LEDS.dmxPixel(i + portOffset, dmxData[i]);
                 }
                 #endif
+
                 #ifdef _use_FastLED
+                for (int i = 0; i < 128; i++) {
+                  leds[i + portOffset] = CRGB(dmx->Data[i*3], dmx->Data[i*3+1], dmx->Data[i*3+2]);
+                }
                 #endif
                 numUniUpdated++;
               }
@@ -337,6 +368,7 @@ void loop() {
               LEDS.show();
               #endif
               #ifdef _use_FastLED
+              FastLED.show();
               #endif
 
               // calculate framerate
