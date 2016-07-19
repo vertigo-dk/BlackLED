@@ -1,16 +1,72 @@
-//initial user defined settings
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// initial user defined settings
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 2
-#define NUM_OF_UNIVERSES_PER_OUT 3
+#define MAX_NUM_LED_PER_OUTPUT 384
+#define NUM_CHANNEL_PER_LED 4
+
+//#define _use_FastLED  //for all types of chips but only 3 channel
+#define _use_octoWS2811 //for all WS2811 type chips
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// definitions calculated from user settings
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define num_channel_per_output MAX_NUM_LED_PER_OUTPUT*NUM_CHANNEL_PER_LED
+#if num_channel_per_output%512 > 0
+#define NUM_OF_UNIVERSES_PER_OUT (num_channel_per_output/512)+1
+#else 
+#define num_universes_per_output num_channel_per_output/512
+#endif
+
+#define num_led_per_output num_channel_per_output/NUM_CHANNEL_PER_LED
+
+#define num_artnet_ports num_universes_per_output*NUM_OF_OUTPUTS
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// settings error check
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef _use_octoWS2811
+#ifdef _use_FastLED
+#error "only use one led controlle type"
+#endif
+#endif
+
+#if NUM_CHANNEL_PER_LED > 4
+#error "max 4 channels per LED"
+#elif NUM_CHANNEL_PER_LED > 3
+#ifndef _use_octoWS2811
+#error "only octoWS2811 has 4 channel support"
+#endif
+#elif NUM_CHANNEL_PER_LED < 3
+#error "only 3 or 4 channel support"
+#endif
+
+#if num_artnet_ports > 18
+#error "can't handle more than 18"
+#endif 
+
+#if F_BUS < 60000000
+#error "Teensy needs to run at 120MHz to read all packets in time"
+#endif 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// real code starts hear
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
 #include "ArtNetFrameExtension.h"
 #include "OctoWS2811.h"
-
-#if F_BUS < 60000000
-#error "Teensy needs to run at 120MHz to read all packets in time"
-#endif 
 
 #include "TeensyMAC.h"
 #include <EEPROM.h>
@@ -36,17 +92,30 @@ uint8_t numUniUpdated = 0;
 unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;
 
-//////////////////////////////////// OCTO setup ///////////////////////
-#define NUM_PIXELS_PR_STRIP 384
-uint32_t dmxMemory[NUM_PIXELS_PR_STRIP * 8];
-DMAMEM uint32_t displayMemory[NUM_PIXELS_PR_STRIP * 8];
-uint32_t drawingMemory[NUM_PIXELS_PR_STRIP * 8];
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// octoWS2811 or FastLED setup
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef _use_octoWS2811
+uint32_t dmxMemory[num_led_per_output * 8];
+DMAMEM uint32_t displayMemory[num_led_per_output * 8];
+uint32_t drawingMemory[num_led_per_output * 8];
 
 const int LEDconfig = WS2811_GRBW | WS2811_800kHz;
 
-OctoWS2811 LEDS(NUM_PIXELS_PR_STRIP, displayMemory, drawingMemory, LEDconfig);
+OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
+#endif
+#ifdef _use_FastLED
+#endif
 
-////////////////////////////////////////// Art-Net config //////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Art-Net config
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 ArtConfig config = {
   {0xDE, 0xAD, 0xBE, 0x00, 0x00, 0x00}, // MAC - last 3 bytes set by Teensy
   {2, 0, 0, 1},                         // IP
@@ -58,7 +127,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "BlackLED_6",                           // Short name
   "BlackLED_6_port",                     // Long name
-  NUM_OF_OUTPUTS * NUM_OF_UNIVERSES_PER_OUT, // Number of ports
+  num_artnet_ports, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
@@ -72,28 +141,47 @@ ArtConfig config = {
 
 ArtNodeExtended node;
 
-//------------------------------------------ udp send ---------------------
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// artnetSend - takes a buffer pointer and its length
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void artnetSend(byte* buffer, int length) {
   udp.beginPacket(node.broadcastIP(), config.udpPort);
   udp.write(buffer, length);
   udp.endPacket();
 }
 
-//////////////////////////////////////// Blink test ///////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Blink test all the leds full white
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void blink() {
-  for (int i = 0; i < 8 * NUM_PIXELS_PR_STRIP; i++) {
+  #ifdef _use_octoWS2811
+  for (int i = 0; i < 8 * num_led_per_output; i++) {
     LEDS.setPixel(i, 0xFFFFFFFF); //set full white
   }
   LEDS.show();
   delay(300);
-  for (int i = 0; i <  8 * NUM_PIXELS_PR_STRIP; i++) {
+  for (int i = 0; i <  8 * num_led_per_output; i++) {
     LEDS.setPixel(i, 0x00000000); //set 0
   }
   LEDS.show();
   delay(100);
+  #endif
+  #ifdef _use_FastLED
+  #endif
 }
 
-////////////////////////////////////// EEPROM setup /////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// EEPROM setup
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // ID of the settings block
 #define CONFIG_VERSION "ls1"
 
@@ -104,7 +192,12 @@ void blink() {
 
 int oemCode = 0x0000; // OemUnkown
 
-//------------------------------------------ load eeprom ---------------------
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// loadConfig - loads configurations from EEPROM
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void loadConfig() {
   // To make sure there are settings, and they are YOURS!
   // If nothing is found it will use the default settings.
@@ -117,7 +210,12 @@ void loadConfig() {
   }
 }
 
-//------------------------------------------ save eeprom ---------------------
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// saveConfig - saves configurations to EEPROM
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void saveConfig() {
   EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
   EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
@@ -127,10 +225,14 @@ void saveConfig() {
   }
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// setup
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  //saveConfig();
+  //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   loadConfig();
   for (int i = 0; i < config.numPorts; i++) {
     bitSet(portSyncFlagCheck, i);
@@ -176,7 +278,13 @@ void setup() {
   analogReadResolution(12);
 
 }
-////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// main loop
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void loop() {
   while (udp.parsePacket()) {
     // First read the header to make sure it's Art-Net
@@ -196,7 +304,7 @@ void loop() {
               //if(poll->TalkToMe & 0x2){
 
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, NUM_OF_UNIVERSES_PER_OUT, tempCelsius, fps, avgUniUpdated);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               //}
@@ -211,9 +319,13 @@ void loop() {
                 uint16_t portOffset = port * 128;
                 //write the dmx data to the Octo frame buffer
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
+                #ifdef _use_octoWS2811
                 for (int i = 0; i < 128; i++) {
                   LEDS.dmxPixel(i + portOffset, dmxData[i]);
                 }
+                #endif
+                #ifdef _use_FastLED
+                #endif
                 numUniUpdated++;
               }
               break;
@@ -221,7 +333,11 @@ void loop() {
 
           // OpSync
           case 0x5200: {
+              #ifdef _use_octoWS2811
               LEDS.show();
+              #endif
+              #ifdef _use_FastLED
+              #endif
 
               // calculate framerate
               currentMillis = millis();
