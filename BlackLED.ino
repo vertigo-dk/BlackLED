@@ -41,6 +41,9 @@
 #endif
 
 #ifdef _use_octoWS2811
+#ifndef #define octo_has_4_channel
+#warning "OctoWS2811 version 1.2.1 from https://github.com/alex-Arc/OctoWS2811.git"
+#endif
 #warning "using less than 8 outputs, octoWS2811 will stil runs 8 outputs"
 #if NUM_OF_OUTPUTS > 8
 #error "octoWS2811 only runs 8 outputs"
