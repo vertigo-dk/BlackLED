@@ -27,3 +27,6 @@
 *.out
 *.app
 .DS_Store
+
+#other stuff
+*.zip
