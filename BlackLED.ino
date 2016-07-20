@@ -27,8 +27,29 @@ const int num_led_per_output = num_channel_per_output/NUM_CHANNEL_PER_LED;
 
 const int num_artnet_ports num_universes_per_output*NUM_OF_OUTPUTS;
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// includes and lib
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define num_artnet_ports num_universes_per_output*NUM_OF_OUTPUTS
+#include <SPI.h>
+#include <Ethernet.h>
+#include <ArtNode.h>
+#include "ArtNetFrameExtension.h"
+
+#ifdef _use_octoWS2811
+#include <OctoWS2811.h>
+#endif
+#ifdef _use_FastLED
+uint32_t portSyncFlag;
+uint32_t portSyncFlagCheck = 0;
+uint8_t syncFlag;
+#include <FastLED.h>
+#endif
+
+#include "TeensyMAC.h"
+#include <EEPROM.h>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -77,24 +98,6 @@ const int num_artnet_ports num_universes_per_output*NUM_OF_OUTPUTS;
 // real code starts hear
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#include <SPI.h>
-#include <Ethernet.h>
-#include <ArtNode.h>
-#include "ArtNetFrameExtension.h"
-
-#ifdef _use_octoWS2811
-#include <OctoWS2811.h>
-#endif
-#ifdef _use_FastLED
-uint32_t portSyncFlag;
-uint32_t portSyncFlagCheck = 0;
-uint8_t syncFlag;
-#include <FastLED.h>
-#endif
-
-#include "TeensyMAC.h"
-#include <EEPROM.h>
 
 #define VERSION_HI 0
 #define VERSION_LO 8
