@@ -66,9 +66,6 @@ uint8_t syncFlag;
 #endif
 
 #ifdef _use_octoWS2811
-#ifndef octo_has_4_channel
-#warning "OctoWS2811 version 1.2.1 from https://github.com/alex-Arc/OctoWS2811.git"
-#endif
 #warning "using less than 8 outputs, octoWS2811 will stil runs 8 outputs"
 #if NUM_OF_OUTPUTS > 8
 #error "octoWS2811 only runs 8 outputs"
@@ -78,6 +75,9 @@ uint8_t syncFlag;
 #if NUM_CHANNEL_PER_LED > 4
 #error "max 4 channels per LED"
 #elif NUM_CHANNEL_PER_LED > 3
+#ifndef octo_has_4_channel
+#error "use OctoWS2811 version 1.2.1 from https://github.com/alex-Arc/OctoWS2811.git"
+#endif
 #ifndef _use_octoWS2811
 #error "only octoWS2811 has 4 channel support"
 #endif
