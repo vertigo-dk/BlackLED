@@ -16,16 +16,13 @@
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT*NUM_CHANNEL_PER_LED;
-#if num_channel_per_output%512 > 0
-const int num_universes_per_output = (num_channel_per_output/512)+1;
-#else
-const int num_universes_per_output = num_channel_per_output/512;
-#endif
+const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
+
+const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
 
 const int num_led_per_output = num_channel_per_output/NUM_CHANNEL_PER_LED;
 
-const int num_artnet_ports num_universes_per_output*NUM_OF_OUTPUTS;
+const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
