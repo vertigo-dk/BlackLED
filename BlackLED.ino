@@ -255,7 +255,14 @@ void saveConfig() {
 
 void setup() {
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
+  ArtConfig tempConfig = config;
   loadConfig();
+  config.numPorts = tempConfig.numPorts;
+  config.numPorts = tempConfig.numPorts;
+  config.verHi = tempConfig.verHi;
+  config.verLo = tempConfig.verLo;
+  saveConfig();
+  
 
 #ifdef PIN_RESET
   pinMode(PIN_RESET, OUTPUT);
