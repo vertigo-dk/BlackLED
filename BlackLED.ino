@@ -4,27 +4,49 @@
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 2
-#define MAX_NUM_LED_PER_OUTPUT 121
-#define NUM_CHANNEL_PER_LED 3
+#define MAX_NUM_LED_PER_OUTPUT 360
+#define NUM_CHANNEL_PER_LED 4
 
-#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
-//#define _use_octoWS2811 //for all WS2811 type chips
+//#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
+#define _use_octoWS2811 //for all WS2811 type chips
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // definitions calculated from user settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define num_channel_per_output MAX_NUM_LED_PER_OUTPUT*NUM_CHANNEL_PER_LED
-#if num_channel_per_output%512 > 0
-#define num_universes_per_output (num_channel_per_output/512)+1
-#else 
-#define num_universes_per_output num_channel_per_output/512
+
+const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
+
+const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
+
+const int num_led_per_output = num_channel_per_output/NUM_CHANNEL_PER_LED;
+
+const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// includes and lib
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include <SPI.h>
+#include <Ethernet.h>
+#include <ArtNode.h>
+#include "ArtNetFrameExtension.h"
+
+#ifdef _use_octoWS2811
+#include <OctoWS2811.h>
+#endif
+#ifdef _use_FastLED
+uint32_t portSyncFlag;
+uint32_t portSyncFlagCheck = 0;
+uint8_t syncFlag;
+#include <FastLED.h>
 #endif
 
-#define num_led_per_output num_channel_per_output/NUM_CHANNEL_PER_LED
-
-#define num_artnet_ports num_universes_per_output*NUM_OF_OUTPUTS
+#include "TeensyMAC.h"
+#include <EEPROM.h>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -50,6 +72,9 @@
 #if NUM_CHANNEL_PER_LED > 4
 #error "max 4 channels per LED"
 #elif NUM_CHANNEL_PER_LED > 3
+#ifndef octo_has_4_channel
+#error "use OctoWS2811 version 1.2.1 from https://github.com/alex-Arc/OctoWS2811.git"
+#endif
 #ifndef _use_octoWS2811
 #error "only octoWS2811 has 4 channel support"
 #endif
@@ -59,35 +84,17 @@
 
 #if num_artnet_ports > 18
 #error "can't handle more than 18"
-#endif 
+#endif
 
 #if F_BUS < 60000000
 #error "Teensy needs to run at 120MHz to read all packets in time"
-#endif 
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // real code starts hear
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#include <SPI.h>
-#include <Ethernet.h>
-#include <ArtNode.h>
-#include "ArtNetFrameExtension.h"
-
-#ifdef _use_octoWS2811
-#include "OctoWS2811.h"
-#endif
-#ifdef _use_FastLED
-uint32_t portSyncFlag;
-uint32_t portSyncFlagCheck = 0;
-uint8_t syncFlag;
-#include "FastLED.h"
-#endif
-
-#include "TeensyMAC.h"
-#include <EEPROM.h>
 
 #define VERSION_HI 0
 #define VERSION_LO 8
@@ -118,7 +125,7 @@ uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
-const int LEDconfig = WS2811_GRBW | WS2811_800kHz;
+const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 #endif
@@ -348,7 +355,7 @@ void loop() {
                 #ifdef _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
-                  LEDS.dmxPixel(i + portOffset, dmxData[i]);
+                  LEDS.setPixel(i + portOffset, dmxData[i]);
                 }
                 #endif
 
