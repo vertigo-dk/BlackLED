@@ -20,7 +20,7 @@ const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
 
 const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
 
-const int num_led_per_output = num_channel_per_output/NUM_CHANNEL_PER_LED;
+const int num_led_per_output = num_universes_per_output*512/NUM_CHANNEL_PER_LED;
 
 const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 
@@ -357,7 +357,7 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                uint16_t portOffset = port * 128;
+                uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
                 //write the dmx data to the Octo frame buffer
                 #ifdef _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
