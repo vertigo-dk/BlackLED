@@ -22,17 +22,18 @@
 #define PIN_LED_3 8
 #define PIN_LED_4 14
 
-#define BRIGHTNESS 204
-#define COLOR_COR 0xFFCC66
-
-
 // ID of the settings block
 #define CONFIG_VERSION "ls1"
+#define COLOR_CONFIG_VERSION "ls1"
 
 // Tell it where to store your config data in EEPROM
 #define CONFIG_MEM_START 16
 #define CONFIG_START 17
 #define CONFIG_END 2
+
+#define COLOR_CONFIG_MEM_START (CONFIG_MEM_START+sizeof(ArtConfig)-CONFIG_START-CONFIG_END+3)
+
+
 
 EthernetUDP udp;
 byte udp_buffer[600];
@@ -47,8 +48,40 @@ byte * dmx_data_ptr_4 = (byte*)led_data + 512 * 3;
 bool locateMode = false;
 
 int oemCode = 0x0000; // OemUnkown
+////////////////////////////////////////////////////////////
+
+#define OpColorCorrection 0x6100
+
+typedef struct S_ColorConfig {
+  uint8_t  brightness;
+  uint8_t  red;
+  uint8_t  green;
+  uint8_t  blue;
+
+} T_ColorConfig;
+
+typedef struct S_ArtColorCorrection {
+  uchar ID[8];                    // protocol ID = "Art-Net"
+  ushort OpCode;                  // == OpPoll
+  uchar ProtVerHi;                // 0
+  uchar ProtVerLo;                // protocol version, set to ProtocolVersion
+
+  uchar Brightness;               // Set brigthness scaleing
+  uchar Red;                      // set red color scaleing
+  uchar Green;                    // set green color scaleing
+  uchar Blue;                     // set blue color scaleing
+
+} T_ArtColorCorrection;
 
 ////////////////////////////////////////////////////////////
+
+T_ColorConfig colorConfig = {
+  255,  // Brghtness 100%
+  255,  // Red 100 %
+  204,  // Green 80%
+  102,  // Blue 40%
+};
+
 ArtConfig config = {
   {0xDE, 0xAD, 0xBE, 0x00, 0x00, 0x00}, // MAC - last 3 bytes set by Teensy
   {2, 0, 0, 1},                         // IP
@@ -65,7 +98,8 @@ ArtConfig config = {
   {0, 0, 0, 0},                         // Port input universes (0-15)
   {0, 1, 2, 3},                          // Port output universes (0-15)
   VERSION_HI,
-  VERSION_LO
+  VERSION_LO,
+
 };
 
 ArtNode node;
@@ -89,10 +123,10 @@ void blink() {
   for (int i = 0; i < sizeof(led_data); i++) {
     d[i] = 0;
   }
-  FastLED[0].show(led_data, NUM_PIXELS_OUT_1, 255);
-  FastLED[1].show(led_data, NUM_PIXELS_OUT_2, 255);
-  FastLED[2].show(led_data, NUM_PIXELS_OUT_3, 255);
-  FastLED[3].show(led_data, NUM_PIXELS_OUT_4, 255);
+  FastLED[0].show(led_data, NUM_PIXELS_OUT_1, colorConfig.brightness);
+  FastLED[1].show(led_data, NUM_PIXELS_OUT_2, colorConfig.brightness);
+  FastLED[2].show(led_data, NUM_PIXELS_OUT_3, colorConfig.brightness);
+  FastLED[3].show(led_data, NUM_PIXELS_OUT_4, colorConfig.brightness);
   delay(100);
 
 }
@@ -110,7 +144,6 @@ void loadConfig() {
     }
   }
 }
-
 ////////////////////////////////////////////////////////////
 void saveConfig() {
   EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
@@ -128,10 +161,31 @@ void artnetSend(byte* buffer, int length) {
 }
 
 ////////////////////////////////////////////////////////////
+void saveColorConfig() {
+  EEPROM.write(COLOR_CONFIG_MEM_START + 0, COLOR_CONFIG_VERSION[0]);
+  EEPROM.write(COLOR_CONFIG_MEM_START + 1, COLOR_CONFIG_VERSION[1]);
+  EEPROM.write(COLOR_CONFIG_MEM_START + 2, COLOR_CONFIG_VERSION[2]);
+  for (unsigned int t = 0; t < sizeof(colorConfig); t++) {
+    EEPROM.write(COLOR_CONFIG_MEM_START + t + 3, *((char*)&colorConfig + t));
+  }
+}
+void loadColorConfig() {
+   // To make sure there are settings, and they are YOURS!
+  // If nothing is found it will use the default settings.
+  if (EEPROM.read(COLOR_CONFIG_MEM_START + 0) == COLOR_CONFIG_VERSION[0] &&
+      EEPROM.read(COLOR_CONFIG_MEM_START + 1) == COLOR_CONFIG_VERSION[1] &&
+      EEPROM.read(COLOR_CONFIG_MEM_START + 2) == COLOR_CONFIG_VERSION[2]) {
+    for (unsigned int t = 0; t < sizeof(colorConfig); t++) {
+      *((char*)&colorConfig + t ) = EEPROM.read(COLOR_CONFIG_MEM_START + t + 3);
+    }
+  }
+}
+////////////////////////////////////////////////////////////
 
 
 void setup() {
   loadConfig();
+  loadColorConfig();
 
   config.numPorts = 4;
   for (int i = 0; i < config.numPorts; i++) {
@@ -172,23 +226,24 @@ void setup() {
   node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
 
   // Create 4 outputs with different lengths (can be tweaked)
-  FastLED.addLeds<WS2813, PIN_LED_1, GRB>(led_data, NUM_PIXELS_OUT_1).setCorrection( COLOR_COR );
-  FastLED.addLeds<WS2813, PIN_LED_2, GRB>(led_data, NUM_PIXELS_OUT_2).setCorrection( COLOR_COR );
-  FastLED.addLeds<WS2813, PIN_LED_3, GRB>(led_data, NUM_PIXELS_OUT_3).setCorrection( COLOR_COR );
-  FastLED.addLeds<WS2813, PIN_LED_4, GRB>(led_data, NUM_PIXELS_OUT_4).setCorrection( COLOR_COR );
+  FastLED.addLeds<WS2813, PIN_LED_1, GRB>(led_data, NUM_PIXELS_OUT_1);
+  FastLED.addLeds<WS2813, PIN_LED_2, GRB>(led_data, NUM_PIXELS_OUT_2);
+  FastLED.addLeds<WS2813, PIN_LED_3, GRB>(led_data, NUM_PIXELS_OUT_3);
+  FastLED.addLeds<WS2813, PIN_LED_4, GRB>(led_data, NUM_PIXELS_OUT_4);
   FastLED.setDither(0);
-  
+
   Serial.begin(9600);
 
   blink();
+  FastLED.setCorrection(  (colorConfig.red << 16) + (colorConfig.green << 8) + colorConfig.blue  );
 }
 
 ////////////////////////////////////////////////////////////
 void loop() {
 
   while (udp.parsePacket()) {
-//  digitalWrite(PIN_DEBUG, HIGH);
-                    
+    //  digitalWrite(PIN_DEBUG, HIGH);
+
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
     if (n >= sizeof(ArtHeader)) {
@@ -228,7 +283,7 @@ void loop() {
                       memcpy(dmx_data_ptr_1, dmx->Data, dmx_length);
                       break;
                     }
-                  case 1: {     
+                  case 1: {
                       memcpy(dmx_data_ptr_2, dmx->Data, dmx_length);
                       break;
                     }
@@ -245,12 +300,12 @@ void loop() {
             }
             break;
           case 0x5200: { //OpSync
-            FastLED[0].show((CRGB*)dmx_data_ptr_1, NUM_PIXELS_OUT_1, BRIGHTNESS);              
-            FastLED[1].show((CRGB*)dmx_data_ptr_2, NUM_PIXELS_OUT_2, BRIGHTNESS);              
-            FastLED[2].show((CRGB*)dmx_data_ptr_3, NUM_PIXELS_OUT_3, BRIGHTNESS);              
-            FastLED[3].show((CRGB*)dmx_data_ptr_4, NUM_PIXELS_OUT_4, BRIGHTNESS);              
-           break;
-          }
+              FastLED[0].show((CRGB*)dmx_data_ptr_1, NUM_PIXELS_OUT_1, colorConfig.brightness);
+              FastLED[1].show((CRGB*)dmx_data_ptr_2, NUM_PIXELS_OUT_2, colorConfig.brightness);
+              FastLED[2].show((CRGB*)dmx_data_ptr_3, NUM_PIXELS_OUT_3, colorConfig.brightness);
+              FastLED[3].show((CRGB*)dmx_data_ptr_4, NUM_PIXELS_OUT_4, colorConfig.brightness);
+              break;
+            }
           case OpAddress: {
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
 
@@ -289,6 +344,21 @@ void loop() {
               artnetSend(udp_buffer, sizeof(ArtPollReply));
               break;
             }
+          case OpColorCorrection: {
+              T_ArtColorCorrection * colorCorrection = (T_ArtColorCorrection*)udp_buffer;
+
+              colorConfig.brightness = colorCorrection->Brightness;
+              colorConfig.red = colorCorrection->Red;
+              colorConfig.green = colorCorrection->Green;
+              colorConfig.blue = colorCorrection->Blue;
+
+              FastLED.setCorrection( (colorConfig.red << 16) + (colorConfig.green << 8) + colorConfig.blue );
+
+              saveColorConfig();
+              loadColorConfig();
+              
+              break;
+            }
           // IpProg packet
           /*case OpIpProg:
             node.createIpProgReply();
@@ -301,7 +371,7 @@ void loop() {
         }
       }
     }
-//  digitalWrite(PIN_DEBUG, LOW);
+    //  digitalWrite(PIN_DEBUG, LOW);
   }
 }
 
