@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 
 #define VERSION_HI 0
-#define VERSION_LO 4
+#define VERSION_LO 5
 
 // Set number of pixels (RGB) per output
 #define NUM_PIXELS_OUT_1 288
@@ -309,23 +309,32 @@ void loop() {
           case OpAddress: {
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
 
-              if (address->LongName[0] != 0)
+              if (address->LongName[0] != 0) {
                 memcpy(config.longName, address->LongName, 64);
-              if (address->ShortName[0] != 0)
+              }
+              if (address->ShortName[0] != 0) {
                 memcpy(config.shortName, address->ShortName, 18);
-
-              if (address->NetSwitch != 0x7f)
-                config.net = address->NetSwitch;
-
-              if (address->SubSwitch != 0x7f)
-                config.subnet = address->SubSwitch;
-
-
+              }
+              if (address->NetSwitch != 0x7F) {               // Use value 0x7f for no change.
+                if ((address->NetSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
+                  config.net = address->NetSwitch & 0x7F;
+                }
+              }
+              if (address->SubSwitch != 0x7F) {               // Use value 0x7f for no change.
+                if ((address->SubSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
+                  config.subnet = address->SubSwitch & 0x7F;
+                }
+              }
               for (int i = 0; i < 4; i++) {
-                if (address->SwIn[i] != 0x7f)
-                  config.portAddrIn[i] = address->SwIn[i];
-                if (address->SwOut[i] != 0x7f) {
-                  config.portAddrOut[i] = address->SwOut[i];
+                if (address->SwIn[i] != 0x7F) {
+                  if ((address->SwIn[i] & 0x80) == 0x80) {
+                    config.portAddrIn[i] = address->SwIn[i] & 0x7F;
+                  }
+                }
+                if (address->SwOut[i] != 0x7F) {
+                  if ((address->SwOut[i] & 0x80) == 0x80) {
+                    config.portAddrOut[i] = address->SwOut[i] & 0x7F;
+                  }
                 }
               }
 
@@ -334,10 +343,7 @@ void loop() {
               } else {
                 locateMode = false;
               }
-
-
               node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
-
               saveConfig();
               loadConfig();
               node.createPollReply();
