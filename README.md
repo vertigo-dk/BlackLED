@@ -1,5 +1,5 @@
-# BlackLED
-Software for the BlackLED controller
+# BlackLED  - Panama edition
+Software for the BlackLED controller -> branch for the Panama Night club
 
 ## Introduction
 Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Arduino IDE.
