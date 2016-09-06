@@ -5,13 +5,14 @@ Software for the BlackLED controller
 Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Arduino IDE.
 
 ## Licence
--------
 The code in this repository is available under the MIT License.
 
 ## Installation
 1. Install [Arduino (1.6.8)](https://www.arduino.cc/en/Main/OldSoftwareReleases#previous)
-- Install [Teensyduino (1.28)](https://www.pjrc.com/teensy/td_download.html)
-- Install [ArtNode](https://github.com/vertigo-dk/ArtNode)
+- Install [Teensyduino (1.28 or newer)](https://www.pjrc.com/teensy/td_download.html)
+- Install [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
+- Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811)
+- Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/Selectable-socket-number)
 - In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt```
 
 	uncoment the line 55 ```teensy31.menu.speed.120opt=120 MHz optimized (overclock)```
@@ -24,28 +25,33 @@ The code in this repository is available under the MIT License.
  - in ```Tools -> CPU``` select
 	and 120 MHz optimized (overclock) from  speed
 
-- 
-
 ## Network setup
 The host computer has to be on the 2.x.x.x network (for example 2.0.0.1), and the subnet must be 255.0.0.0.
 
 The nodes get an calculated IP address from the MAC address accordingly to ArtNet 3 specifications in the 2.x.x.x space.
 
 ## Dependencies
-- [ArtNode](https://github.com/vertigo-dk/ArtNode)
-- [Ethernet](https://github.com/alex-Arc/Ethernet/tree/Selectable-socket-number)
+- [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
+- [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/Selectable-socket-number)
 	modified version with that uses only 1 socket at full memory size
+- [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811) modified to run 4 channel LEDs
 
 
-Compatibility
-------------
+## Compatibility
 - teensy 3.1/3.2 with WIZ820io
 
-Known issues
-------------
-at 18 DMX universes it will begin to drop packages
+## Known issues
+at over 18 DMX universes it will begin to drop packages
 
-Version history
-------------
+## Version history
+### v0.8.5-Beta
+#### New features
+- LED chip selection through defines
+ - currently supports ws28 types and LPD8806
+- Set number of leds through defines and auto fit to DMX size
+- Set number of outputs through defines
 
-### v0.8  Developer
+#### Changes
+- Octows2811 now external lib
+
+### no history back this far
