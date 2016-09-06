@@ -3,7 +3,7 @@
 // initial user defined settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define NUM_OF_OUTPUTS 2
+#define NUM_OF_OUTPUTS 6
 #define MAX_NUM_LED_PER_OUTPUT 360
 #define NUM_CHANNEL_PER_LED 4
 
@@ -97,7 +97,7 @@ uint8_t syncFlag;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define VERSION_HI 0
-#define VERSION_LO 8
+#define VERSION_LO 85
 
 #define PIN_RESET 9
 
@@ -269,7 +269,7 @@ void setup() {
   config.verHi = tempConfig.verHi;
   config.verLo = tempConfig.verLo;
   saveConfig();
-  
+
 
 #ifdef PIN_RESET
   pinMode(PIN_RESET, OUTPUT);

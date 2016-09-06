@@ -10,7 +10,7 @@ The code in this repository is available under the MIT License.
 
 ## Installation
 1. Install [Arduino (1.6.8)](https://www.arduino.cc/en/Main/OldSoftwareReleases#previous)
-- Install [Teensyduino (1.28)](https://www.pjrc.com/teensy/td_download.html)
+- Install [Teensyduino (1.28 or newer)](https://www.pjrc.com/teensy/td_download.html)
 - Install [ArtNode](https://github.com/vertigo-dk/ArtNode)
 - In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt```
 
@@ -24,7 +24,7 @@ The code in this repository is available under the MIT License.
  - in ```Tools -> CPU``` select
 	and 120 MHz optimized (overclock) from  speed
 
-- 
+-
 
 ## Network setup
 The host computer has to be on the 2.x.x.x network (for example 2.0.0.1), and the subnet must be 255.0.0.0.
@@ -48,4 +48,4 @@ at 18 DMX universes it will begin to drop packages
 Version history
 ------------
 
-### v0.8  Developer
+### v0.8.5  Developer
