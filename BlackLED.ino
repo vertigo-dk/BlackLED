@@ -11,7 +11,7 @@
 //#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
 #define _use_octoWS2811 //for all WS2811 type chips
 
-#define blackOnPollTimeOut true
+const static uint32_t blackOnPollTimeOut = 50000; //recoment more than 20000 ms
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -117,7 +117,7 @@ uint8_t numUniUpdated = 0;
 unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;
 
-unsigned long lastPoll = 0;
+uint32_t lastPoll = 0;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -350,7 +350,7 @@ void loop() {
               //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
               //if(poll->TalkToMe & 0x2){
 
-              #ifdef blackOnPollTimeOut == true
+              #ifdef blackOnPollTimeOut >= 1
                 lastPoll = millis();
               #endif
 
@@ -495,9 +495,9 @@ void loop() {
 
   // read temperature value
   tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
-  #ifdef blackOnPollTimeOut == true
+  #ifdef blackOnPollTimeOut >= 1
     currentMillis = millis();
-    if (currentMillis - lastPoll > 20000) {
+    if (currentMillis - lastPoll > blackOnPollTimeOut) {
       for (int i = 0; i < num_led_per_output * 8; i++) {
         LEDS.setPixel(i, 0);
       }
