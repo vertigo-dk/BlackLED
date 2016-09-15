@@ -1,3 +1,4 @@
+////////////////// Panama edition ////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // initial user defined settings
@@ -261,6 +262,7 @@ void saveConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
+  //Serial.begin(9600);
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;
   loadConfig();
@@ -357,13 +359,16 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
-                if(portOffset>=2){
-                  portOffset++;
-                  if(portOffset>=5){
-                    portOffset++;
-                  }
+                //Serial.print("incomming port: ");
+                //Serial.print(port);
+                if(port>=4 && port<=7){
+                  port+=2;
+                }else if(port>=8){
+                  port+=4;
                 }
+                //Serial.print("  remap to: ");
+                //Serial.println(port);
+                uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
                 //write the dmx data to the Octo frame buffer
                 #ifdef _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
