@@ -11,6 +11,8 @@
 //#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
 #define _use_octoWS2811 //for all WS2811 type chips
 
+#define blackOnPollTimeOut true
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // definitions calculated from user settings
@@ -114,6 +116,8 @@ float avgUniUpdated = 0;
 uint8_t numUniUpdated = 0;
 unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;
+
+unsigned long lastPoll = 0;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -346,6 +350,10 @@ void loop() {
               //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
               //if(poll->TalkToMe & 0x2){
 
+              #ifdef blackOnPollTimeOut == true
+                lastPoll = millis();
+              #endif
+
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
               sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
@@ -487,4 +495,13 @@ void loop() {
 
   // read temperature value
   tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
+  #ifdef blackOnPollTimeOut == true
+    currentMillis = millis();
+    if (currentMillis - lastPoll > 20000) {
+      for (int i = 0; i < num_led_per_output * 8; i++) {
+        LEDS.setPixel(i, 0);
+      }
+      LEDS.show();
+    }
+  #endif
 }
