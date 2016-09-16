@@ -1,11 +1,10 @@
-////////////////// Panama edition ////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // initial user defined settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define NUM_OF_OUTPUTS 5
-#define MAX_NUM_LED_PER_OUTPUT 240
+#define NUM_OF_OUTPUTS 6
+#define MAX_NUM_LED_PER_OUTPUT 360
 #define NUM_CHANNEL_PER_LED 4
 
 //#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
@@ -154,8 +153,8 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "BLED_RGBW_5_Pan",                           // Short name
-  "BlackLED_RGBW_5_port_Panama",                     // Long name
+  "BlackLED_6",                           // Short name
+  "BlackLED_6_port",                     // Long name
   num_artnet_ports, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
@@ -266,7 +265,6 @@ void saveConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  //Serial.begin(9600);
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;
   loadConfig();
@@ -367,20 +365,10 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                //Serial.print("incomming port: ");
-                //Serial.print(port);
-                if(port>=4 && port<=7){
-                  port+=2;
-                }else if(port>=8){
-                  port+=4;
-                }
-                //Serial.print("  remap to: ");
-                //Serial.println(port);
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
                 //write the dmx data to the Octo frame buffer
                 #ifdef _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
-
                 for (int i = 0; i < 128; i++) {
                   LEDS.setPixel(i + portOffset, dmxData[i]);
                 }
