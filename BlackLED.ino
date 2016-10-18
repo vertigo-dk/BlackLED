@@ -12,6 +12,9 @@
 
 #define blackOnOpPollTimeOut //recoment more than 20000 ms
 const static uint32_t OpPollTimeOut = 30000;
+
+//#define _MadMapper_sync_
+#define _Madrix_sync_
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // definitions calculated from user settings
@@ -477,6 +480,26 @@ void loop() {
               break;
             }
         }
+      }else if(memcmp(header->ID, "MadrixN", 8) == 0){
+        #ifdef _use_octoWS2811
+        LEDS.show();
+        #endif
+        #ifdef _use_FastLED
+        FastLED.show();
+        #endif
+
+        // calculate framerate
+        currentMillis = millis();
+        if(currentMillis > previousMillis){
+          fps = 1 / ((currentMillis - previousMillis) * 0.001);
+        } else {
+          fps = 0;
+        }
+        previousMillis = currentMillis;
+
+        // calculate average universes Updated
+        avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
+        numUniUpdated = 0;
       }
     }
   }
