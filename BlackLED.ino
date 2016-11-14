@@ -10,7 +10,7 @@
 //#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
 #define _use_octoWS2811 //for all WS2811 type chips
 
-#define blackOnOpPollTimeOut //recoment more than 20000 ms
+//#define blackOnOpPollTimeOut //recoment more than 20000 ms
 const static uint32_t OpPollTimeOut = 30000;
 
 //#define _MadMapper_sync_
