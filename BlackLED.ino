@@ -12,6 +12,8 @@
 #define _use_octoWS2811 //for all WS2811 type chips
 
 #define blackOnOpPollTimeOut //recoment more than 20000 ms
+#define blackOnOpSyncTimeOut //recoment more than 20000 ms
+const static uint32_t OpSyncTimeOut = 300000;
 const static uint32_t OpPollTimeOut = 30000;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -489,6 +491,13 @@ void loop() {
               break;
             }
         }
+      }else if(memcmp(header->ID, "MadrixN", 8) == 0){
+        #ifdef _use_octoWS2811
+        LEDS.show();
+        #endif
+        #ifdef _use_FastLED
+        FastLED.show();
+        #endif
       }
     }
   }
