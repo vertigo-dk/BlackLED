@@ -1,5 +1,5 @@
-# BlackLED
-Software for the BlackLED controller
+# BlackLED - Ofelia edition
+Software for the BlackLED controller  -> branch for the Wave installation at Ofelia plads
 
 ## Introduction
 Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Arduino IDE.
@@ -30,11 +30,16 @@ The host computer has to be on the 2.x.x.x network (for example 2.0.0.1), and th
 
 The nodes get an calculated IP address from the MAC address accordingly to ArtNet 3 specifications in the 2.x.x.x space.
 
+## OSC setup
+a message will be sent to 2.0.0.1 on UDP port 49161, every time there is a change in the beam state
+the format is ```/BeamBreak/[Art-Net start address]/[beam state(0-1)]```
+
 ## Dependencies
 - [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
 - [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/Selectable-socket-number)
 	modified version with that uses only 1 socket at full memory size
 - [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811) modified to run 4 channel LEDs
+- [OSC](https://github.com/CNMAT/OSC)
 
 
 ## Compatibility
