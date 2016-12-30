@@ -1,19 +1,30 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+//!!!!!!!!!!!!!!!!!! OFELIA spesific !!!!!!!!!!!!!!!!!!!
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include <OSCMessage.h>
+IPAddress OSCoutIp(2, 0, 0, 1);
+uint16_t OSCoutPort = 49161;
+#define beam_break_pin 1
+bool  beam_break_stat = false;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // initial user defined settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define NUM_OF_OUTPUTS 6
-#define MAX_NUM_LED_PER_OUTPUT 360
+#define NUM_OF_OUTPUTS 4
+#define MAX_NUM_LED_PER_OUTPUT 288
 #define NUM_CHANNEL_PER_LED 4
 
 //#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
 #define _use_octoWS2811 //for all WS2811 type chips
 
-//#define blackOnOpSyncTimeOut //recoment more than 20000 ms
-//#define blackOnOpPollTimeOut //recoment more than 20000 ms
-const static uint32_t OpSyncTimeOut = 300000;
-const static uint32_t OpPollTimeOut = 30000;
+//#define blackOnOpSyncTimeOut
+//#define blackOnOpPollTimeOut
+const static uint32_t OpSyncTimeOut = 300000; //recoment more than 20000 ms
+const static uint32_t OpPollTimeOut = 30000;  //recoment more than 20000 ms
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -269,6 +280,10 @@ void saveConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
+  //-----OFELIA------
+  pinMode(beam_break_pin, INPUT_PULLUP);
+  //-----------------
+
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;
   loadConfig();
@@ -335,6 +350,18 @@ void setup() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
+  //-----OFELIA------
+  if(digitalRead(beam_break_pin) =! beam_break_stat) {
+    beam_break_stat = !beam_break_stat;
+    OSCMessage msg("/BeamBreak/");
+    msg.add(node.getStartAddress());
+    msg.add(beam_break_stat);
+    udp.beginPacket(OSCoutIP, OSCoutPort);
+    msg.send(udp);
+    udp.endPacket();
+    msg.empty();
+  }
+  //-----------------
   while (udp.parsePacket()) {
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
