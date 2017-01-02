@@ -32,7 +32,7 @@ The nodes get an calculated IP address from the MAC address accordingly to ArtNe
 
 ## OSC setup
 a message will be sent to 2.0.0.1 on UDP port 49161, every time there is a change in the beam state
-the format is ```/BeamBreak/[Art-Net start address]/[beam state(0-1)]```
+the format is ```/BeamBreak/[Art-Net start address] [beam state(0-1)]```
 
 ## Dependencies
 - [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
