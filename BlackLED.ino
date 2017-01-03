@@ -5,10 +5,10 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <OSCMessage.h>
-IPAddress OSCoutIp(2, 0, 0, 1);
+
 uint16_t OSCoutPort = 49161;
-#define beam_break_pin 1
-bool  beam_break_stat = false;
+#define beam_break_pin 23
+uint8_t  beam_break_stat = 1;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // initial user defined settings
@@ -16,7 +16,9 @@ bool  beam_break_stat = false;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 4
 #define MAX_NUM_LED_PER_OUTPUT 288
-#define NUM_CHANNEL_PER_LED 4
+#define NUM_CHANNEL_PER_LED 3
+
+//#define _use_FastLED_ws2813
 
 //#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
 #define _use_octoWS2811 //for all WS2811 type chips
@@ -61,6 +63,10 @@ uint8_t syncFlag;
 #include <FastLED.h>
 #endif
 
+#ifdef _use_FastLED_ws2813
+#include <FastLED.h>
+#endif
+
 #include "TeensyMAC.h"
 #include <EEPROM.h>
 
@@ -71,7 +77,6 @@ uint8_t syncFlag;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef _use_FastLED
 #if NUM_OF_OUTPUTS > 2
-#error  "max 2 outputs for FastLED. if you want more it is easy to implement"
 #endif
 #ifdef _use_octoWS2811
 #error "only use one led controlle type"
@@ -329,9 +334,9 @@ void setup() {
   LEDS.show();
   #endif
   #ifdef _use_FastLED
-  FastLED.addLeds<LPD8806, 2, 6, RGB, DATA_RATE_KHZ(12)>(leds, num_led_per_output).setCorrection( UncorrectedColor );
+  FastLED.addLeds<, 2, 6, RGB, DATA_RATE_KHZ(12)>(leds, num_led_per_output).setCorrection( UncorrectedColor );
   #if NUM_OF_OUTPUTS > 1
-  FastLED.addLeds<LPD8806, 14, 20, RGB, DATA_RATE_KHZ(12)>(leds, num_led_per_output, num_led_per_output).setCorrection( UncorrectedColor );
+  FastLED.addLeds<WS2813, 14, 20, RGB, DATA_RATE_KHZ(12)>(leds, num_led_per_output, num_led_per_output).setCorrection( UncorrectedColor );
   #endif
   #endif
 
@@ -351,12 +356,13 @@ void setup() {
 
 void loop() {
   //-----OFELIA------
-  if(digitalRead(beam_break_pin) =! beam_break_stat) {
-    beam_break_stat = !beam_break_stat;
+  if(digitalRead(beam_break_pin) != beam_break_stat) {
+
+    beam_break_stat = digitalRead(beam_break_pin);
     OSCMessage msg("/BeamBreak/");
     msg.add(node.getStartAddress());
     msg.add(beam_break_stat);
-    udp.beginPacket(OSCoutIP, OSCoutPort);
+    udp.beginPacket(IPAddress(2, 0, 0, 1), OSCoutPort);
     msg.send(udp);
     udp.endPacket();
     msg.empty();
