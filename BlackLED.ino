@@ -10,6 +10,25 @@ uint16_t OSCoutPort = 49161;
 #define beam_break_pin 23
 uint8_t  beam_break_stat = 1;
 
+typedef struct S_ColorConfig {
+  uint8_t  brightness;
+  uint8_t  red;
+  uint8_t  green;
+  uint8_t  blue;
+
+} T_ColorConfig;
+
+
+T_ColorConfig colorConfig = {
+  255,  // Brghtness 100%
+  255,  // Red 100 %
+  204,  // Green 80%
+  102,  // Blue 40%
+};
+
+#define COLOR_CONFIG_MEM_START (CONFIG_MEM_START+sizeof(ArtConfig)-CONFIG_START-CONFIG_END+3)
+#define COLOR_CONFIG_VERSION "ls1"
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // initial user defined settings
 //
@@ -271,6 +290,32 @@ void saveConfig() {
     EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
   }
 }
+//----------------------------------------------------------------
+//-----OFELIA-----------------------------------------------------
+//----------------------------------------------------------------
+
+void saveColorConfig() {
+  EEPROM.write(COLOR_CONFIG_MEM_START + 0, COLOR_CONFIG_VERSION[0]);
+  EEPROM.write(COLOR_CONFIG_MEM_START + 1, COLOR_CONFIG_VERSION[1]);
+  EEPROM.write(COLOR_CONFIG_MEM_START + 2, COLOR_CONFIG_VERSION[2]);
+  for (unsigned int t = 0; t < sizeof(colorConfig); t++) {
+    EEPROM.write(COLOR_CONFIG_MEM_START + t + 3, *((char*)&colorConfig + t));
+  }
+}
+void loadColorConfig() {
+   // To make sure there are settings, and they are YOURS!
+  // If nothing is found it will use the default settings.
+  if (EEPROM.read(COLOR_CONFIG_MEM_START + 0) == COLOR_CONFIG_VERSION[0] &&
+      EEPROM.read(COLOR_CONFIG_MEM_START + 1) == COLOR_CONFIG_VERSION[1] &&
+      EEPROM.read(COLOR_CONFIG_MEM_START + 2) == COLOR_CONFIG_VERSION[2]) {
+    for (unsigned int t = 0; t < sizeof(colorConfig); t++) {
+      *((char*)&colorConfig + t ) = EEPROM.read(COLOR_CONFIG_MEM_START + t + 3);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+//----------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -329,10 +374,14 @@ void setup() {
   #endif
 
 
-
+  //-----OFELIA------
   #ifdef _use_FastLED
   FastLED.addLeds<OCTOWS2811>(leds, num_led_per_output);
+  FastLED.setDither(0);
+  FastLED.setBrightness(colorConfig.brightness);
+  FastLED.setCorrection(  (colorConfig.red << 16) + (colorConfig.green << 8) + colorConfig.blue  );
   #endif
+  //-----------------
 
   blink();
 
