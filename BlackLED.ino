@@ -4,7 +4,7 @@
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include <OSCMessage.h>
+//#include <OSCMessage.h>
 
 uint16_t OSCoutPort = 49161;
 #define beam_break_pin 23
@@ -29,6 +29,8 @@ T_ColorConfig colorConfig = {
 #define COLOR_CONFIG_MEM_START (CONFIG_MEM_START+sizeof(ArtConfig)-CONFIG_START-CONFIG_END+3)
 #define COLOR_CONFIG_VERSION "ls1"
 
+String oscAddr;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // initial user defined settings
 //
@@ -39,9 +41,9 @@ T_ColorConfig colorConfig = {
 
 
 
-#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
-#define USE_OCTOWS2811
-//#define _use_octoWS2811 //for all WS2811 type chips
+//#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
+//#define USE_OCTOWS2811
+#define _use_octoWS2811 //for all WS2811 type chips
 
 //#define blackOnOpSyncTimeOut
 //#define blackOnOpPollTimeOut
@@ -77,9 +79,6 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #include <OctoWS2811.h>
 #endif
 #ifdef _use_FastLED
-uint32_t portSyncFlag;
-uint32_t portSyncFlagCheck = 0;
-uint8_t syncFlag;
 #include <FastLED.h>
 #endif
 
@@ -324,10 +323,6 @@ void loadColorConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  //-----OFELIA------
-  pinMode(beam_break_pin, INPUT_PULLUP);
-  //-----------------
-
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;
   loadConfig();
@@ -336,6 +331,17 @@ void setup() {
   config.verHi = tempConfig.verHi;
   config.verLo = tempConfig.verLo;
   saveConfig();
+
+  //-----OFELIA------
+  pinMode(beam_break_pin, INPUT_PULLUP);
+  String startAddr = String(node.getStartAddress(), DEC);
+  oscAddr = String("/BeamBreak/" + startAddr);
+
+  /*if (getStartAddress() > 99) {
+
+  }else if (getStartAddress() > 9) {
+  }*/
+  //-----------------
 
 
 #ifdef PIN_RESET
@@ -400,15 +406,34 @@ void setup() {
 void loop() {
   //-----OFELIA------
   if(digitalRead(beam_break_pin) != beam_break_stat) {
-
     beam_break_stat = digitalRead(beam_break_pin);
-    OSCMessage msg("/BeamBreak/");
-    msg.add(node.getStartAddress());
+
+    //char addr[15];
+    //oscAddr.toCharArray(addr, 15);
+    char oscStr[23] = {0x2f, 0x42, 0x65, 0x61, 0x6d, 0x42, 0x72, 0x65, 0x61, 0x6b, 0x2f, 0x30, 0x30, 0x30, 0x00, 0x00, 0x2c, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    char dig3;
+    char dig2;
+    char dig1;
+    int addrINT = node.getStartAddress();
+    dig3 = addrINT/100;
+    dig2 = (addrINT-dig3)/10;
+    dig1 = addrINT-(dig3*100)-(dig2*10);
+
+    oscStr[11] = dig3 + 0x30;
+    oscStr[12] = dig2 + 0x30;
+    oscStr[13] = dig1 + 0x30;
+    //memcpy(&oscStr+11, addrCHAR, 3);
+    udp.beginPacket(IPAddress(2, 0, 0, 1), OSCoutPort);
+    udp.write(oscStr, 23);
+    udp.write(beam_break_stat);
+    udp.endPacket();
+    /*OSCMessage msg(addr);
     msg.add(beam_break_stat);
     udp.beginPacket(IPAddress(2, 0, 0, 1), OSCoutPort);
     msg.send(udp);
     udp.endPacket();
-    msg.empty();
+    msg.empty();*/
   }
   //-----------------
   while (udp.parsePacket()) {
