@@ -37,13 +37,13 @@ String oscAddr;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 6
-#define MAX_NUM_LED_PER_OUTPUT 260
+#define MAX_NUM_LED_PER_OUTPUT 360
 #define NUM_CHANNEL_PER_LED 3
 
 
 
-#define _use_FastLED
-//#define _use_octoWS2811 //for all WS2811 type chips
+//#define _use_FastLED
+#define _use_octoWS2811 //for all WS2811 type chips
 
 //#define blackOnOpSyncTimeOut
 //#define blackOnOpPollTimeOut
@@ -157,7 +157,11 @@ uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
+#if NUM_CHANNEL_PER_LED > 3
 const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
+#else
+const int LEDconfig = WS2811_RGB | WS2811_800kHz;
+#endif
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 #endif
@@ -229,9 +233,14 @@ void blink() {
   delay(100);
   #endif
   #ifdef _use_FastLED
-  for (int i = 0; i < 8 * num_led_per_output; i++) {
+  for (int i = 0; i < NUM_OF_OUTPUTS * num_led_per_output; i++) {
+    leds[i] = 0xFFFFFF;
+  }
+  LEDS.show();
+  for (int i = 0; i < NUM_OF_OUTPUTS * num_led_per_output; i++) {
     leds[i] = 0x000000;
   }
+  LEDS.show();
   delay(100);
   #endif
 }
@@ -467,8 +476,7 @@ void loop() {
               if (port >= 0 && port < config.numPorts) {
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
                 //write the dmx data to the Octo frame buffer
-                #if 0
-                //def _use_octoWS2811
+                #ifdef _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
                   LEDS.setPixel(i + portOffset, dmxData[i]);
@@ -487,8 +495,7 @@ void loop() {
 
           // OpSync
           case 0x5200: {
-              #if 0
-              //def _use_octoWS2811
+              #ifdef _use_octoWS2811
               LEDS.show();
               #endif
               #ifdef _use_FastLED
