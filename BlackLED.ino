@@ -6,6 +6,7 @@
 
 //#include <OSCMessage.h>
 
+
 uint16_t OSCoutPort = 49161;
 #define beam_break_pin 23
 uint8_t  beam_break_stat = 1;
@@ -36,14 +37,13 @@ String oscAddr;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 6
-#define MAX_NUM_LED_PER_OUTPUT 288
+#define MAX_NUM_LED_PER_OUTPUT 260
 #define NUM_CHANNEL_PER_LED 3
 
 
 
-//#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
-//#define USE_OCTOWS2811
-#define _use_octoWS2811 //for all WS2811 type chips
+#define _use_FastLED
+//#define _use_octoWS2811 //for all WS2811 type chips
 
 //#define blackOnOpSyncTimeOut
 //#define blackOnOpPollTimeOut
@@ -79,10 +79,6 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #include <OctoWS2811.h>
 #endif
 #ifdef _use_FastLED
-#include <FastLED.h>
-#endif
-
-#ifdef _use_FastLED_ws2813
 #include <FastLED.h>
 #endif
 
@@ -233,10 +229,9 @@ void blink() {
   delay(100);
   #endif
   #ifdef _use_FastLED
-  FastLED.clear();
-  FastLED.showColor(0xFFFFFF);
-  delay(300);
-  FastLED.clear();
+  for (int i = 0; i < 8 * num_led_per_output; i++) {
+    leds[i] = 0x000000;
+  }
   delay(100);
   #endif
 }
@@ -292,7 +287,7 @@ void saveConfig() {
 //----------------------------------------------------------------
 //-----OFELIA-----------------------------------------------------
 //----------------------------------------------------------------
-
+/*
 void saveColorConfig() {
   EEPROM.write(COLOR_CONFIG_MEM_START + 0, COLOR_CONFIG_VERSION[0]);
   EEPROM.write(COLOR_CONFIG_MEM_START + 1, COLOR_CONFIG_VERSION[1]);
@@ -312,7 +307,7 @@ void loadColorConfig() {
     }
   }
 }
-
+*/
 //----------------------------------------------------------------
 //----------------------------------------------------------------
 
@@ -382,10 +377,10 @@ void setup() {
 
   //-----OFELIA------
   #ifdef _use_FastLED
-  FastLED.addLeds<OCTOWS2811>(leds, num_led_per_output);
-  FastLED.setDither(0);
-  FastLED.setBrightness(colorConfig.brightness);
-  FastLED.setCorrection(  (colorConfig.red << 16) + (colorConfig.green << 8) + colorConfig.blue  );
+  FastLED.addLeds<WS2811_PORTD, NUM_OF_OUTPUTS>(leds, NUM_OF_OUTPUTS*MAX_NUM_LED_PER_OUTPUT);
+  //FastLED.setDither(0);
+  //FastLED.setBrightness(colorConfig.brightness);
+  //FastLED.setCorrection(  (colorConfig.red << 16) + (colorConfig.green << 8) + colorConfig.blue  );
   #endif
   //-----------------
 
@@ -472,7 +467,8 @@ void loop() {
               if (port >= 0 && port < config.numPorts) {
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
                 //write the dmx data to the Octo frame buffer
-                #ifdef _use_octoWS2811
+                #if 0
+                //def _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
                   LEDS.setPixel(i + portOffset, dmxData[i]);
@@ -491,7 +487,8 @@ void loop() {
 
           // OpSync
           case 0x5200: {
-              #ifdef _use_octoWS2811
+              #if 0
+              //def _use_octoWS2811
               LEDS.show();
               #endif
               #ifdef _use_FastLED
