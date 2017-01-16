@@ -37,8 +37,8 @@ String oscAddr;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 6
-#define MAX_NUM_LED_PER_OUTPUT 360
-#define NUM_CHANNEL_PER_LED 3
+#define MAX_NUM_LED_PER_OUTPUT 260
+#define NUM_CHANNEL_PER_LED 4
 
 
 
@@ -157,11 +157,8 @@ uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
-#if NUM_CHANNEL_PER_LED > 3
-const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
-#else
 const int LEDconfig = WS2811_RGB | WS2811_800kHz;
-#endif
+
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 #endif
@@ -187,7 +184,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "BlackLED_6",                           // Short name
   "BlackLED_6_port",                     // Long name
-  num_artnet_ports, // Number of ports
+  18, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
@@ -383,16 +380,6 @@ void setup() {
   LEDS.show();
   #endif
 
-
-  //-----OFELIA------
-  #ifdef _use_FastLED
-  FastLED.addLeds<WS2811_PORTD, NUM_OF_OUTPUTS>(leds, NUM_OF_OUTPUTS*MAX_NUM_LED_PER_OUTPUT);
-  //FastLED.setDither(0);
-  //FastLED.setBrightness(colorConfig.brightness);
-  //FastLED.setCorrection(  (colorConfig.red << 16) + (colorConfig.green << 8) + colorConfig.blue  );
-  #endif
-  //-----------------
-
   blink();
 
   // to read internal temperature
@@ -474,7 +461,15 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
+                if (port >= 6) {
+                  port += 3;
+                }
+                if (port >= 12) {
+                  port += 3;
+                }
+                
+                uint16_t portOffset = port * 128;
+
                 //write the dmx data to the Octo frame buffer
                 #ifdef _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
