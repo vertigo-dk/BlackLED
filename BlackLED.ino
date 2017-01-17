@@ -385,7 +385,6 @@ void setup() {
   // to read internal temperature
   analogReference(INTERNAL);
   analogReadResolution(12);
-
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -397,8 +396,8 @@ void setup() {
 void loop() {
   //-----OFELIA------
   if(digitalRead(beam_break_pin) != beam_break_stat) {
+    
     beam_break_stat = digitalRead(beam_break_pin);
-
     //char addr[15];
     //oscAddr.toCharArray(addr, 15);
     char oscStr[23] = {0x2f, 0x42, 0x65, 0x61, 0x6d, 0x42, 0x72, 0x65, 0x61, 0x6b, 0x2f, 0x30, 0x30, 0x30, 0x00, 0x00, 0x2c, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00};
