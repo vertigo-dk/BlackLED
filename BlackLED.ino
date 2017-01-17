@@ -85,39 +85,6 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #include "TeensyMAC.h"
 #include <EEPROM.h>
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// settings error check
-//
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#ifdef _use_octoWS2811
-#warning "using less than 8 outputs, octoWS2811 will stil runs 8 outputs"
-#if NUM_OF_OUTPUTS > 8
-#error "octoWS2811 only runs 8 outputs"
-#endif
-#endif
-
-#if NUM_CHANNEL_PER_LED > 4
-#error "max 4 channels per LED"
-#elif NUM_CHANNEL_PER_LED > 3
-#ifndef octo_has_4_channel
-#error "use OctoWS2811 version 1.2.1 from https://github.com/alex-Arc/OctoWS2811.git"
-#endif
-#ifndef _use_octoWS2811
-#error "only octoWS2811 has 4 channel support"
-#endif
-#elif NUM_CHANNEL_PER_LED < 3
-#error "only 3 or 4 channel support"
-#endif
-
-#if num_artnet_ports > 18
-#error "can't handle more than 18"
-#endif
-
-#if F_BUS < 60000000
-#error "Teensy needs to run at 120MHz to read all packets in time"
-#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
