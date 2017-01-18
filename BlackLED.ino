@@ -18,10 +18,10 @@ typedef struct S_ColorConfig {
   uint8_t  green;
   uint8_t  blue;
 
-} T_ColorConfig;
+} ColorConfig_t;
 
 
-T_ColorConfig colorConfig = {
+ColorConfig_t colorConfig = {
   255,  // Brghtness 100%
   255,  // Red 100 %
   204,  // Green 80%
@@ -329,7 +329,8 @@ void setup() {
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
   // start FastLED
   LEDS.addLeds<WS2811_PORTD, 8>(leds, 260);
-
+  LEDS.setCorrection(colorConfig.red, colorConfig.green, colorConfig.blue);
+  LEDS.setDither(BINARY_DITHER);
   //blink();
 
   // to read internal temperature
