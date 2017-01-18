@@ -5,8 +5,9 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //#include <OSCMessage.h>
-#include <vector>
-
+// #include "OctoWS2811.h"
+// #define FASTLED_ALLOW_INTERRUPTS 0
+// #define USE_OCTOWS2811
 
 uint16_t OSCoutPort = 49161;
 #define beam_break_pin 23
@@ -328,8 +329,13 @@ void setup() {
   // Open ArtNet
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
   // start FastLED
+
+
   LEDS.addLeds<WS2811_PORTD, 8>(leds, 260);
-  LEDS.setCorrection(colorConfig.red, colorConfig.green, colorConfig.blue);
+  // LEDS.addLeds<OCTOWS2811, RGB>(leds, 260);
+
+  LEDS.setCorrection(CRGB(colorConfig.red, colorConfig.green, colorConfig.blue));
+  LEDS.setBrightness(255);
   LEDS.setDither(BINARY_DITHER);
   //blink();
 
@@ -345,6 +351,7 @@ void setup() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
+  LEDS.show();
   //-----OFELIA------
   if(digitalRead(beam_break_pin) != beam_break_stat) {
 
