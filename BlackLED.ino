@@ -84,7 +84,6 @@ boolean locateMode = 0;
 
 // variables for the node.report
 float tempVal = 0;
-float fps = 0;
 float avgUniUpdated = 0;
 uint8_t numUniUpdated = 0;
 unsigned long currentMillis = 0;
@@ -247,7 +246,7 @@ void saveConfig() {
 //----------------------------------------------------------------
 //-----OFELIA-----------------------------------------------------
 //----------------------------------------------------------------
-/*
+
 void saveColorConfig() {
   EEPROM.write(COLOR_CONFIG_MEM_START + 0, COLOR_CONFIG_VERSION[0]);
   EEPROM.write(COLOR_CONFIG_MEM_START + 1, COLOR_CONFIG_VERSION[1]);
@@ -267,7 +266,7 @@ void loadColorConfig() {
     }
   }
 }
-*/
+
 //----------------------------------------------------------------
 //----------------------------------------------------------------
 
@@ -404,9 +403,9 @@ void loop() {
               #ifdef blackOnOpPollTimeOut
                 lastPoll = millis();
               #endif
-
+              uint16_t fps = LEDS.getFPS();
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, 3, tempCelsius, fps, avgUniUpdated);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%d;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, 3, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               //}
@@ -450,37 +449,6 @@ void loop() {
                   memcpy(dmxOut_9, dmx->Data, 512);
                   break;
                 }
-                /*switch (port) {
-                case 0:
-                  memcpy(ledOut_1, dmx->Data, 348);
-                  memcpy(ledOut_2, dmx->Data+348, 164);
-                break;
-                case 1:
-                  memcpy(ledOut_2+164, dmx->Data, 512);
-                break;
-                case 2:
-                  memcpy(ledOut_2+164+512, dmx->Data, 104);
-                  memcpy(ledOut_4, dmx->Data+104, 408);
-                break;
-                case 3:
-                  memcpy(ledOut_4+408, dmx->Data, 372);
-                  memcpy(ledOut_5, dmx->Data+372, 140);
-                break;
-                case 4:
-                  memcpy(ledOut_5+140, dmx->Data, 512);
-                break;
-                case 5:
-                  memcpy(ledOut_5+140+512, dmx->Data, 128);
-                  memcpy(ledOut_7, dmx->Data+128, 384);
-                break;
-                case 6:
-                  memcpy(ledOut_7+384, dmx->Data, 396);
-                  memcpy(ledOut_8, dmx->Data+396, 116);
-                break;
-                case 7:
-                  memcpy(ledOut_8+116, dmx->Data, 232);
-                break;
-              }*/
                 numUniUpdated++;
               }
               break;
@@ -493,15 +461,6 @@ void loop() {
               #ifdef blackOnOpSyncTimeOut
                 lastSync = millis();
               #endif
-
-              // calculate framerate
-              currentMillis = millis();
-              if(currentMillis > previousMillis){
-                fps = 1 / ((currentMillis - previousMillis) * 0.001);
-              } else {
-                fps = 0;
-              }
-              previousMillis = currentMillis;
 
               // calculate average universes Updated
               avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
@@ -579,25 +538,11 @@ void loop() {
             }
         }
       }else if(memcmp(header->ID, "MadrixN", 8) == 0){
-        #ifdef _use_octoWS2811
-        LEDS.show();
-        #endif
-        #ifdef _use_FastLED
         FastLED.show();
-        #endif
 
         #ifdef blackOnOpSyncTimeOut
           lastSync = millis();
         #endif
-
-        // calculate framerate
-        currentMillis = millis();
-        if(currentMillis > previousMillis){
-          fps = 1 / ((currentMillis - previousMillis) * 0.001);
-        } else {
-          fps = 0;
-        }
-        previousMillis = currentMillis;
 
         // calculate average universes Updated
         avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
