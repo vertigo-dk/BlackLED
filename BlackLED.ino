@@ -66,6 +66,7 @@ const static uint32_t OpPollTimeOut = 30000;  //recoment more than 20000 ms
 #include "TeensyMAC.h"
 #include <EEPROM.h>
 
+#include "vector"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -89,7 +90,7 @@ float avgUniUpdated = 0;
 uint8_t numUniUpdated = 0;
 unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;
-
+float fps = 0;
 uint32_t lastPoll = 0;
 uint32_t lastSync = 0;
 
@@ -99,8 +100,7 @@ uint32_t lastSync = 0;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CRGB leds[2080]; //116 + 260 + 260 + 260 + 260 +116 +(ofset 144*2 + 260*2)
-
+CRGB leds[2080];
 /*
 uint8_t *ledOut_1 = (uint8_t*)leds;          //fod
 uint8_t *ofset_1 = ledOut_1 + 348;
@@ -354,13 +354,6 @@ void loop() {
   //---------FastLED show when posible to get good dither
   if(colorConfig.dither == BINARY_DITHER){
     LEDS.show();
-    currentMillis = millis();
-    if(currentMillis > previousMillis){
-      fps = 1 / ((currentMillis - previousMillis) * 0.001);
-    } else {
-      fps = 0;
-    }
-    previousMillis = currentMillis;
   }
   //---------------------------------------------------------
 
@@ -403,22 +396,21 @@ void loop() {
       ArtHeader* header = (ArtHeader*)udp_buffer;
       // Check packet ID
       if (memcmp(header->ID, "Art-Net", 8) == 0) {  //is Art-Net
-        // Read the rest of the packet
-        udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
         // Package Op-Code determines type of packet
         switch (header->OpCode) {
 
           // Poll packet
           case OpPoll: {
+              udp.read(udp_buffer+sizeof(ArtHeader), udp.available());
               //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
               //if(poll->TalkToMe & 0x2){
 
               #ifdef blackOnOpPollTimeOut
                 lastPoll = millis();
               #endif
-              uint16_t fps = LEDS.getFPS();
+
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%d;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, 3, tempCelsius, fps, avgUniUpdated);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, 3, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               //}
@@ -427,39 +419,40 @@ void loop() {
 
           // DMX packet
           case OpDmx: {
-              ArtDmx* dmx = (ArtDmx*)udp_buffer;
-              int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
+            udp.read(udp_buffer+sizeof(ArtHeader), sizeof(T_ArtDmxHeader));
+              T_ArtDmxHeader* dmxHeader = (T_ArtDmxHeader*)udp_buffer;
+              int port = node.getAddress(dmxHeader->SubUni, dmxHeader->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
                 switch (port) {
                   case 0:
-                  memcpy(dmxOut_0, dmx->Data, 512);
+                  udp.read(dmxOut_0, udp.available());
                   break;
                   case 1:
-                  memcpy(dmxOut_1, dmx->Data, 512);
+                  udp.read(dmxOut_1, udp.available());
                   break;
                   case 2:
-                  memcpy(dmxOut_2, dmx->Data, 512);
+                  udp.read(dmxOut_2, udp.available());
                   break;
                   case 3:
-                  memcpy(dmxOut_3, dmx->Data, 512);
+                  udp.read(dmxOut_3, udp.available());
                   break;
                   case 4:
-                  memcpy(dmxOut_4, dmx->Data, 512);
+                  udp.read(dmxOut_4, udp.available());
                   break;
                   case 5:
-                  memcpy(dmxOut_5, dmx->Data, 512);
+                  udp.read(dmxOut_5, udp.available());
                   break;
                   case 6:
-                  memcpy(dmxOut_6, dmx->Data, 512);
+                  udp.read(dmxOut_6, udp.available());
                   break;
                   case 7:
-                  memcpy(dmxOut_7, dmx->Data, 512);
+                  udp.read(dmxOut_7, udp.available());
                   break;
                   case 8:
-                  memcpy(dmxOut_8, dmx->Data, 512);
+                  udp.read(dmxOut_8, udp.available());
                   break;
                   case 9:
-                  memcpy(dmxOut_9, dmx->Data, 512);
+                  udp.read(dmxOut_9, udp.available());
                   break;
                 }
                 numUniUpdated++;
@@ -475,6 +468,14 @@ void loop() {
                 lastSync = millis();
               #endif
 
+              currentMillis = millis();
+              if(currentMillis > previousMillis){
+                fps = 1 / ((currentMillis - previousMillis) * 0.001);
+              } else {
+                fps = 0;
+              }
+              previousMillis = currentMillis;
+
               // calculate average universes Updated
               avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
               numUniUpdated = 0;
@@ -484,7 +485,7 @@ void loop() {
 
           // OpAddress
           case OpAddress: {
-
+            udp.read(udp_buffer+sizeof(ArtHeader), udp.available());
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
 
               if (address->LongName[0] != 0) {
@@ -540,7 +541,7 @@ void loop() {
         // answer routine for Art-Net Extended
       } else if (memcmp(header->ID, "Art-Ext", 8) == 0) {
         // Read the rest of the packet
-        udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
+        udp.read(udp_buffer+sizeof(ArtHeader), udp.available());
         // Package Op-Code determines type of packet
         switch (header->OpCode) {
           // ArtNet Frame Extension
