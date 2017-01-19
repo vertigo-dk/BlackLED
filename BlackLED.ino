@@ -18,7 +18,7 @@ typedef struct S_ColorConfig {
   uint8_t  red;
   uint8_t  green;
   uint8_t  blue;
-
+  uint8_t  dither;
 } ColorConfig_t;
 
 
@@ -27,6 +27,7 @@ ColorConfig_t colorConfig = {
   255,  // Red 100 %
   204,  // Green 80%
   102,  // Blue 40%
+  0
 };
 
 #define COLOR_CONFIG_MEM_START (CONFIG_MEM_START+sizeof(ArtConfig)-CONFIG_START-CONFIG_END+3)
@@ -88,7 +89,7 @@ float avgUniUpdated = 0;
 uint8_t numUniUpdated = 0;
 unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;
-
+float fps;
 uint32_t lastPoll = 0;
 uint32_t lastSync = 0;
 
@@ -327,15 +328,15 @@ void setup() {
 
   // Open ArtNet
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
+
+
   // start FastLED
-
-
   LEDS.addLeds<WS2811_PORTD, 8>(leds, 260);
   // LEDS.addLeds<OCTOWS2811, RGB>(leds, 260);
 
   LEDS.setCorrection(CRGB(colorConfig.red, colorConfig.green, colorConfig.blue));
-  LEDS.setBrightness(255);
-  LEDS.setDither(BINARY_DITHER);
+  LEDS.setBrightness(colorConfig.brightness);
+  LEDS.setDither(colorConfig.dither);
   //blink();
 
   // to read internal temperature
@@ -350,7 +351,12 @@ void setup() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
-  LEDS.show();
+  //---------FastLED show when posible to get good dither
+  if(colorConfig.dither == BINARY_DITHER){
+    LEDS.show();
+  }
+  //---------------------------------------------------------
+
   //-----OFELIA------
   if(digitalRead(beam_break_pin) != beam_break_stat) {
 
@@ -403,9 +409,8 @@ void loop() {
               #ifdef blackOnOpPollTimeOut
                 lastPoll = millis();
               #endif
-              uint16_t fps = LEDS.getFPS();
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%d;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, 3, tempCelsius, fps, avgUniUpdated);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, 3, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               //}
