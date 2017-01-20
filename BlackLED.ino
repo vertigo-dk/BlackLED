@@ -90,7 +90,7 @@ float avgUniUpdated = 0;
 uint8_t numUniUpdated = 0;
 unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;
-float fps = 0;
+float fps;
 uint32_t lastPoll = 0;
 uint32_t lastSync = 0;
 
@@ -335,7 +335,6 @@ void setup() {
   // Open Ethernet connection
   IPAddress gateway(config.ip[0], 0, 0, 1);
   IPAddress subnet(255, 0, 0, 0);
-
   Ethernet.begin(config.mac, config.ip,  gateway, gateway, subnet);
   udp.begin(config.udpPort);
 
@@ -421,7 +420,6 @@ void loop() {
               #ifdef blackOnOpPollTimeOut
                 lastPoll = millis();
               #endif
-
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
               sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, 3, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
@@ -481,7 +479,7 @@ void loop() {
               #ifdef blackOnOpSyncTimeOut
                 lastSync = millis();
               #endif
-
+              //calculate fps
               currentMillis = millis();
               if(currentMillis > previousMillis){
                 fps = 1 / ((currentMillis - previousMillis) * 0.001);
