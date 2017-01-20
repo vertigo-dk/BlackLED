@@ -419,40 +419,40 @@ void loop() {
 
           // DMX packet
           case OpDmx: {
-            udp.read(udp_buffer+sizeof(ArtHeader), sizeof(T_ArtDmxHeader));
+            udp.read(udp_buffer+sizeof(ArtHeader), sizeof(T_ArtDmxHeader)-sizeof(ArtHeader));
               T_ArtDmxHeader* dmxHeader = (T_ArtDmxHeader*)udp_buffer;
               int port = node.getAddress(dmxHeader->SubUni, dmxHeader->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
                 switch (port) {
                   case 0:
-                  udp.read(dmxOut_0, udp.available());
+                  udp.read(dmxOut_0, 512);
                   break;
                   case 1:
-                  udp.read(dmxOut_1, udp.available());
+                  udp.read(dmxOut_1, 512);
                   break;
                   case 2:
-                  udp.read(dmxOut_2, udp.available());
+                  udp.read(dmxOut_2, 512);
                   break;
                   case 3:
-                  udp.read(dmxOut_3, udp.available());
+                  udp.read(dmxOut_3, 512);
                   break;
                   case 4:
-                  udp.read(dmxOut_4, udp.available());
+                  udp.read(dmxOut_4, 512);
                   break;
                   case 5:
-                  udp.read(dmxOut_5, udp.available());
+                  udp.read(dmxOut_5, 512);
                   break;
                   case 6:
-                  udp.read(dmxOut_6, udp.available());
+                  udp.read(dmxOut_6, 512);
                   break;
                   case 7:
-                  udp.read(dmxOut_7, udp.available());
+                  udp.read(dmxOut_7, 512);
                   break;
                   case 8:
-                  udp.read(dmxOut_8, udp.available());
+                  udp.read(dmxOut_8, 512);
                   break;
                   case 9:
-                  udp.read(dmxOut_9, udp.available());
+                  udp.read(dmxOut_9, 512);
                   break;
                 }
                 numUniUpdated++;
