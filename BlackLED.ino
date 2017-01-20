@@ -99,8 +99,9 @@ uint32_t lastSync = 0;
 // FastLED setup
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-CRGB leds[2080];
+#define ledLenght 260
+#define universSize 512
+CRGB leds[ledLenght*8];
 /*
 uint8_t *ledOut_1 = (uint8_t*)leds;          //fod
 uint8_t *ofset_1 = ledOut_1 + 348;
@@ -115,23 +116,23 @@ uint8_t *ofset_8 = ledOut_8 + 348;
 */
 
 CRGB *ledOut_1 = leds;
-CRGB *ledOut_2 = ledOut_1+260;
-CRGB *ledOut_3 = ledOut_2+260;    //empty
-CRGB *ledOut_4 = ledOut_3+260;
-CRGB *ledOut_5 = ledOut_4+260;
-CRGB *ledOut_6 = ledOut_5+260;    //empty
-CRGB *ledOut_7 = ledOut_6+260;
-CRGB *ledOut_8 = ledOut_7+260;
+CRGB *ledOut_2 = ledOut_1+ledLenght;
+CRGB *ledOut_3 = ledOut_2+ledLenght;    //empty
+CRGB *ledOut_4 = ledOut_3+ledLenght;
+CRGB *ledOut_5 = ledOut_4+ledLenght;
+CRGB *ledOut_6 = ledOut_5+ledLenght;    //empty
+CRGB *ledOut_7 = ledOut_6+ledLenght;
+CRGB *ledOut_8 = ledOut_7+ledLenght;
 
 uint8_t* dmxOut_0 = (uint8_t*)ledOut_1;
 uint8_t* dmxOut_1 = (uint8_t*)ledOut_2;
-uint8_t* dmxOut_2 = (uint8_t*)dmxOut_1+512;
+uint8_t* dmxOut_2 = (uint8_t*)dmxOut_1+universSize;
 uint8_t* dmxOut_3 = (uint8_t*)ledOut_4;
-uint8_t* dmxOut_4 = (uint8_t*)dmxOut_3+512;
+uint8_t* dmxOut_4 = (uint8_t*)dmxOut_3+universSize;
 uint8_t* dmxOut_5 = (uint8_t*)ledOut_5;
-uint8_t* dmxOut_6 = (uint8_t*)dmxOut_5+512;
+uint8_t* dmxOut_6 = (uint8_t*)dmxOut_5+universSize;
 uint8_t* dmxOut_7 = (uint8_t*)ledOut_7;
-uint8_t* dmxOut_8 = (uint8_t*)dmxOut_7+512;
+uint8_t* dmxOut_8 = (uint8_t*)dmxOut_7+universSize;
 uint8_t* dmxOut_9 = (uint8_t*)ledOut_8;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
