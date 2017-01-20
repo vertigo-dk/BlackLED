@@ -6,8 +6,8 @@
 
 //#include <OSCMessage.h>
 // #include "OctoWS2811.h"
-#define FASTLED_ALLOW_INTERRUPTS 0
-#define USE_OCTOWS2811
+// #define FASTLED_ALLOW_INTERRUPTS 0
+// #define USE_OCTOWS2811
 
 uint16_t OSCoutPort = 49161;
 #define beam_break_pin 23
@@ -322,7 +322,6 @@ void setup() {
   // Open Ethernet connection
   IPAddress gateway(config.ip[0], 0, 0, 1);
   IPAddress subnet(255, 0, 0, 0);
-
   Ethernet.begin(config.mac, config.ip,  gateway, gateway, subnet);
   udp.begin(config.udpPort);
 
@@ -331,8 +330,8 @@ void setup() {
 
 
   // start FastLED
-  // LEDS.addLeds<WS2811_PORTD, 8>(leds, 260);
-  LEDS.addLeds<OCTOWS2811, RGB>(leds, 260);
+  LEDS.addLeds<WS2811_PORTD, 8>(leds, 260);
+  // LEDS.addLeds<OCTOWS2811, RGB>(leds, 260);
 
   LEDS.setCorrection(CRGB(colorConfig.red, colorConfig.green, colorConfig.blue));
   LEDS.setBrightness(colorConfig.brightness);
@@ -466,6 +465,15 @@ void loop() {
               #ifdef blackOnOpSyncTimeOut
                 lastSync = millis();
               #endif
+
+              //calculate fps
+              currentMillis = millis();
+              if(currentMillis > previousMillis){
+                fps = 1 / ((currentMillis - previousMillis) * 0.001);
+              } else {
+                fps = 0;
+              }
+              previousMillis = currentMillis;
 
               // calculate average universes Updated
               avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
