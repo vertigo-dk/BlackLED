@@ -30,6 +30,22 @@ ColorConfig_t colorConfig = {
   0
 };
 
+typedef struct S_ArtColorCorrection {
+  uint8_t ID[8];                    // protocol ID = "Art-Net"
+  uint16_t OpCode;                  // == OpPoll
+  uint8_t ProtVerHi;                // 0
+  uint8_t ProtVerLo;                // protocol version, set to ProtocolVersion
+
+  uint8_t Brightness;               // Set brigthness scaleing
+  uint8_t Red;                      // set red color scaleing
+  uint8_t Green;                    // set green color scaleing
+  uint8_t Blue;                     // set blue color scaleing
+  uint8_t Dither;
+
+} ArtColorCorrection_t;
+
+#define OpColorCorrection 0x6100
+
 #define COLOR_CONFIG_MEM_START (CONFIG_MEM_START+sizeof(ArtConfig)-CONFIG_START-CONFIG_END+3)
 #define COLOR_CONFIG_VERSION "ls1"
 
@@ -541,6 +557,23 @@ void loop() {
               artnetSend(udp_buffer, sizeof(ArtPollReply));
               //node.createExtendedPollReply();
               //artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
+              break;
+            }
+          case OpColorCorrection: {
+              udp.read(udp_buffer+sizeof(ArtHeader), udp.available());
+              ArtColorCorrection_t *colorCorrection = (ArtColorCorrection_t*)udp_buffer;
+
+              colorConfig.brightness = colorCorrection->Brightness;
+              colorConfig.red = colorCorrection->Red;
+              colorConfig.green = colorCorrection->Green;
+              colorConfig.blue = colorCorrection->Blue;
+              colorConfig.dither = colorCorrection->Dither;
+              FastLED.setBrightness(colorConfig.brightness);
+              FastLED.setDither(colorConfig.dither);
+              FastLED.setCorrection( (colorConfig.red << 16) + (colorConfig.green << 8) + colorConfig.blue );
+
+              saveColorConfig();
+              loadColorConfig();
               break;
             }
 
