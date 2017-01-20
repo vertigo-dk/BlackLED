@@ -135,6 +135,18 @@ uint8_t* dmxOut_7 = (uint8_t*)ledOut_7;
 uint8_t* dmxOut_8 = (uint8_t*)dmxOut_7+universSize;
 uint8_t* dmxOut_9 = (uint8_t*)ledOut_8;
 
+uint8_t* dmxOut[] = {dmxOut_0,
+                    dmxOut_1,
+                    dmxOut_2,
+                    dmxOut_3,
+                    dmxOut_4,
+                    dmxOut_5,
+                    dmxOut_6,
+                    dmxOut_7,
+                    dmxOut_8,
+                    dmxOut_9};
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Art-Net config
@@ -424,7 +436,8 @@ void loop() {
               T_ArtDmxHeader* dmxHeader = (T_ArtDmxHeader*)udp_buffer;
               int port = node.getAddress(dmxHeader->SubUni, dmxHeader->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                switch (port) {
+                udp.read(dmxOut[port], 512);
+                /*switch (port) {
                   case 0:
                   udp.read(dmxOut_0, 512);
                   break;
@@ -455,7 +468,7 @@ void loop() {
                   case 9:
                   udp.read(dmxOut_9, 512);
                   break;
-                }
+                }*/
                 numUniUpdated++;
               }
               break;
