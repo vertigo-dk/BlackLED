@@ -21,6 +21,11 @@ const static uint32_t OpPollTimeOut = 30000;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+uint16_t OSCoutPort = 49161;
+#define beam_break_pin 23
+uint8_t  beam_break_stat = 1;
+
+////////////////////////
 const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
 
 const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
@@ -74,18 +79,6 @@ uint8_t syncFlag;
 #endif
 #endif
 
-#if NUM_CHANNEL_PER_LED > 4
-#error "max 4 channels per LED"
-#elif NUM_CHANNEL_PER_LED > 3
-#ifndef octo_has_4_channel
-#error "use OctoWS2811 version 1.2.1 from https://github.com/alex-Arc/OctoWS2811.git"
-#endif
-#ifndef _use_octoWS2811
-#error "only octoWS2811 has 4 channel support"
-#endif
-#elif NUM_CHANNEL_PER_LED < 3
-#error "only 3 or 4 channel support"
-#endif
 
 #if num_artnet_ports > 18
 #error "can't handle more than 18"
@@ -102,7 +95,7 @@ uint8_t syncFlag;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define VERSION_HI 0
-#define VERSION_LO 85
+#define VERSION_LO 86
 
 #define PIN_RESET 9
 
@@ -133,7 +126,7 @@ uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
-const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
+const int LEDconfig = WS2811_RGB | WS2811_800kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 #endif
@@ -287,6 +280,11 @@ void setup() {
   delay(150);
 #endif
 
+//-----OFELIA------
+pinMode(beam_break_pin, INPUT_PULLUP);
+// String startAddr = String(node.getStartAddress(), DEC);
+//--------------------
+
   // Read MAC address
   mac_addr mac;
   for (int i = 3; i < 6; i++) {
@@ -335,6 +333,39 @@ void setup() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
+
+  if(digitalRead(beam_break_pin) != beam_break_stat) {
+
+    beam_break_stat = digitalRead(beam_break_pin);
+    //char addr[15];
+    //oscAddr.toCharArray(addr, 15);
+    char oscStr[23] = {0x2f, 0x42, 0x65, 0x61, 0x6d, 0x42, 0x72, 0x65, 0x61, 0x6b, 0x2f, 0x30, 0x30, 0x30, 0x00, 0x00, 0x2c, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    char dig3;
+    char dig2;
+    char dig1;
+    int addrINT = node.getStartAddress();
+    dig3 = addrINT/100;
+    dig2 = (addrINT-(dig3*100))/10;
+    dig1 = addrINT-(dig3*100)-(dig2*10);
+
+    oscStr[11] = dig3 + 0x30;
+    oscStr[12] = dig2 + 0x30;
+    oscStr[13] = dig1 + 0x30;
+    //memcpy(&oscStr+11, addrCHAR, 3);
+    udp.beginPacket(IPAddress(2, 0, 0, 1), OSCoutPort);
+    udp.write(oscStr, 23);
+    udp.write(beam_break_stat);
+    udp.endPacket();
+    /*OSCMessage msg(addr);
+    msg.add(beam_break_stat);
+    udp.beginPacket(IPAddress(2, 0, 0, 1), OSCoutPort);
+    msg.send(udp);
+    udp.endPacket();
+    msg.empty();*/
+  }
+
+
   while (udp.parsePacket()) {
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
@@ -369,10 +400,17 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
+                if(port >=6 ){
+                  port += 3;
+                  if(port >=14 ) {
+                    port +=3;
+                  }
+                }
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
                 //write the dmx data to the Octo frame buffer
                 #ifdef _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
+
                 for (int i = 0; i < 128; i++) {
                   LEDS.setPixel(i + portOffset, dmxData[i]);
                 }
