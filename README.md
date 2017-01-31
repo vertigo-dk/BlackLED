@@ -32,9 +32,9 @@ The nodes get an calculated IP address from the MAC address accordingly to ArtNe
 
 ## Dependencies
 - [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
-- [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/Selectable-socket-number)
+- [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/LTS-BlackLed)
 	modified version with that uses only 1 socket at full memory size
-- [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811) modified to run 4 channel LEDs
+- [OctoWS2811 lib](https://github.com/PaulStoffregen/OctoWS2811) modified to run 4 channel LEDs
 
 
 ## Compatibility
