@@ -1,5 +1,5 @@
 # BlackLED
-Software for the BlackLED controller
+Software for the BlackLED controller Ofelia
 
 ## Introduction
 Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Arduino IDE.
