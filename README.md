@@ -11,7 +11,7 @@ The code in this repository is available under the MIT License.
 1. Install [Arduino (1.6.11)](https://www.arduino.cc/en/Main/OldSoftwareReleases#previous)
 - Install [Teensyduino (1.30)](https://www.pjrc.com/teensy/td_download.html)
 - Install [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
-- Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811)
+- Install modified [OctoWS2811 lib](https://github.com/PaulStoffregen/OctoWS2811)
 - Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/LTS-BlackLed)
 - In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt```
 
