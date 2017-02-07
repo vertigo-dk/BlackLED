@@ -5,10 +5,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 6
 #define MAX_NUM_LED_PER_OUTPUT 360
-#define NUM_CHANNEL_PER_LED 4
-
-//#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
-#define _use_octoWS2811 //for all WS2811 type chips
+#define NUM_CHANNEL_PER_LED 4 // do not change this
 
 //#define blackOnOpSyncTimeOut //recoment more than 20000 ms
 //#define blackOnOpPollTimeOut //recoment more than 20000 ms
@@ -40,15 +37,7 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #include <ArtNode.h>
 #include "ArtNetFrameExtension.h"
 
-#ifdef _use_octoWS2811
 #include <OctoWS2811.h>
-#endif
-#ifdef _use_FastLED
-uint32_t portSyncFlag;
-uint32_t portSyncFlagCheck = 0;
-uint8_t syncFlag;
-#include <FastLED.h>
-#endif
 
 #include "TeensyMAC.h"
 #include <EEPROM.h>
@@ -58,38 +47,6 @@ uint8_t syncFlag;
 // settings error check
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#ifdef _use_FastLED
-#if NUM_OF_OUTPUTS > 2
-#error  "max 2 outputs for FastLED. if you want more it is easy to implement"
-#endif
-#ifdef _use_octoWS2811
-#error "only use one led controlle type"
-#endif
-#endif
-
-#ifdef _use_octoWS2811
-#warning "using less than 8 outputs, octoWS2811 will stil runs 8 outputs"
-#if NUM_OF_OUTPUTS > 8
-#error "octoWS2811 only runs 8 outputs"
-#endif
-#endif
-
-#if NUM_CHANNEL_PER_LED > 4
-#error "max 4 channels per LED"
-#elif NUM_CHANNEL_PER_LED > 3
-#ifndef octo_has_4_channel
-#error "use OctoWS2811 version 1.2.1 from https://github.com/alex-Arc/OctoWS2811.git"
-#endif
-#ifndef _use_octoWS2811
-#error "only octoWS2811 has 4 channel support"
-#endif
-#elif NUM_CHANNEL_PER_LED < 3
-#error "only 3 or 4 channel support"
-#endif
-
-#if num_artnet_ports > 18
-#error "can't handle more than 18"
-#endif
 
 #if F_BUS < 60000000
 #error "Teensy needs to run at 120MHz to read all packets in time"
@@ -128,7 +85,6 @@ uint32_t lastSync = 0;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifdef _use_octoWS2811
 uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
@@ -136,11 +92,6 @@ uint32_t drawingMemory[num_led_per_output * 8];
 const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
-#endif
-
-#ifdef _use_FastLED
-CRGB leds[num_led_per_output * NUM_OF_OUTPUTS];
-#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -309,16 +260,8 @@ void setup() {
   // Open ArtNet
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
 
-  #ifdef _use_octoWS2811
   LEDS.begin();
   LEDS.show();
-  #endif
-  #ifdef _use_FastLED
-  FastLED.addLeds<LPD8806, 2, 6, RGB, DATA_RATE_KHZ(12)>(leds, num_led_per_output).setCorrection( UncorrectedColor );
-  #if NUM_OF_OUTPUTS > 1
-  FastLED.addLeds<LPD8806, 14, 20, RGB, DATA_RATE_KHZ(12)>(leds, num_led_per_output, num_led_per_output).setCorrection( UncorrectedColor );
-  #endif
-  #endif
 
   blink();
 
@@ -370,19 +313,12 @@ void loop() {
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
+
                 //write the dmx data to the Octo frame buffer
-                #ifdef _use_octoWS2811
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
                   LEDS.setPixel(i + portOffset, dmxData[i]);
                 }
-                #endif
-
-                #ifdef _use_FastLED
-                for (int i = 0; i < 128; i++) {
-                  leds[i + portOffset] = CRGB(dmx->Data[i*3], dmx->Data[i*3+1], dmx->Data[i*3+2]);
-                }
-                #endif
                 numUniUpdated++;
               }
               break;
@@ -390,12 +326,6 @@ void loop() {
 
           // OpSync
           case 0x5200: {
-              #ifdef _use_octoWS2811
-              LEDS.show();
-              #endif
-              #ifdef _use_FastLED
-              FastLED.show();
-              #endif
 
               #ifdef blackOnOpSyncTimeOut
                 lastSync = millis();
@@ -486,12 +416,7 @@ void loop() {
             }
         }
       }else if(memcmp(header->ID, "MadrixN", 8) == 0){
-        #ifdef _use_octoWS2811
         LEDS.show();
-        #endif
-        #ifdef _use_FastLED
-        FastLED.show();
-        #endif
 
         #ifdef blackOnOpSyncTimeOut
           lastSync = millis();
