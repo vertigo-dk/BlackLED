@@ -1,22 +1,65 @@
-//initial user defined settings
-#define NUM_OF_OUTPUTS 2
-#define NUM_OF_UNIVERSES_PER_OUT 3
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// initial user defined settings
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define NUM_OF_OUTPUTS 6
+#define MAX_NUM_LED_PER_OUTPUT 360
+#define NUM_CHANNEL_PER_LED 4 // do not change this
+
+//#define blackOnOpSyncTimeOut //recoment more than 20000 ms
+//#define blackOnOpPollTimeOut //recoment more than 20000 ms
+const static uint32_t OpSyncTimeOut = 300000;
+const static uint32_t OpPollTimeOut = 30000;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// definitions calculated from user settings
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
+
+const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
+
+const int num_led_per_output = num_universes_per_output*512/NUM_CHANNEL_PER_LED;
+
+const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// includes and lib
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <SPI.h>
 #include <Ethernet.h>
 #include <ArtNode.h>
 #include "ArtNetFrameExtension.h"
-#include "OctoWS2811.h"
 
-#if F_BUS < 60000000
-#error "Teensy needs to run at 120MHz to read all packets in time"
-#endif 
+#include <OctoWS2811.h>
 
 #include "TeensyMAC.h"
 #include <EEPROM.h>
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// settings error check
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#if F_BUS < 60000000
+#error "Teensy needs to run at 120MHz to read all packets in time"
+#endif
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// real code starts hear
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #define VERSION_HI 0
-#define VERSION_LO 8
+#define VERSION_LO 85
 
 #define PIN_RESET 9
 
@@ -24,9 +67,6 @@ EthernetUDP udp;
 uint8_t udp_buffer[600];
 
 boolean locateMode = 0;
-uint32_t portSyncFlag;
-uint32_t portSyncFlagCheck = 0;
-uint8_t syncFlag;
 
 // variables for the node.report
 float tempVal = 0;
@@ -36,17 +76,29 @@ uint8_t numUniUpdated = 0;
 unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;
 
-//////////////////////////////////// OCTO setup ///////////////////////
-#define NUM_PIXELS_PR_STRIP 384
-uint32_t dmxMemory[NUM_PIXELS_PR_STRIP * 8];
-DMAMEM uint32_t displayMemory[NUM_PIXELS_PR_STRIP * 8];
-uint32_t drawingMemory[NUM_PIXELS_PR_STRIP * 8];
+uint32_t lastPoll = 0;
+uint32_t lastSync = 0;
 
-const int LEDconfig = WS2811_GRBW | WS2811_800kHz;
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// octoWS2811
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-OctoWS2811 LEDS(NUM_PIXELS_PR_STRIP, displayMemory, drawingMemory, LEDconfig);
+uint32_t dmxMemory[num_led_per_output * 8];
+DMAMEM uint32_t displayMemory[num_led_per_output * 8];
+uint32_t drawingMemory[num_led_per_output * 8];
 
-////////////////////////////////////////// Art-Net config //////////////////
+const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
+
+OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Art-Net config
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 ArtConfig config = {
   {0xDE, 0xAD, 0xBE, 0x00, 0x00, 0x00}, // MAC - last 3 bytes set by Teensy
   {2, 0, 0, 1},                         // IP
@@ -58,7 +110,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "BlackLED_6",                           // Short name
   "BlackLED_6_port",                     // Long name
-  NUM_OF_OUTPUTS * NUM_OF_UNIVERSES_PER_OUT, // Number of ports
+  num_artnet_ports, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
@@ -72,28 +124,43 @@ ArtConfig config = {
 
 ArtNodeExtended node;
 
-//------------------------------------------ udp send ---------------------
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// artnetSend - takes a buffer pointer and its length
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void artnetSend(byte* buffer, int length) {
   udp.beginPacket(node.broadcastIP(), config.udpPort);
   udp.write(buffer, length);
   udp.endPacket();
 }
 
-//////////////////////////////////////// Blink test ///////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Blink test all the leds full white
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void blink() {
-  for (int i = 0; i < 8 * NUM_PIXELS_PR_STRIP; i++) {
+  for (int i = 0; i < 8 * num_led_per_output; i++) {
     LEDS.setPixel(i, 0xFFFFFFFF); //set full white
   }
   LEDS.show();
   delay(300);
-  for (int i = 0; i <  8 * NUM_PIXELS_PR_STRIP; i++) {
+  for (int i = 0; i <  8 * num_led_per_output; i++) {
     LEDS.setPixel(i, 0x00000000); //set 0
   }
   LEDS.show();
   delay(100);
 }
 
-////////////////////////////////////// EEPROM setup /////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// EEPROM setup
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // ID of the settings block
 #define CONFIG_VERSION "ls1"
 
@@ -104,7 +171,12 @@ void blink() {
 
 int oemCode = 0x0000; // OemUnkown
 
-//------------------------------------------ load eeprom ---------------------
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// loadConfig - loads configurations from EEPROM
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void loadConfig() {
   // To make sure there are settings, and they are YOURS!
   // If nothing is found it will use the default settings.
@@ -117,7 +189,12 @@ void loadConfig() {
   }
 }
 
-//------------------------------------------ save eeprom ---------------------
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// saveConfig - saves configurations to EEPROM
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void saveConfig() {
   EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
   EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
@@ -127,14 +204,22 @@ void saveConfig() {
   }
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// setup
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  //saveConfig();
+  //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
+  ArtConfig tempConfig = config;
   loadConfig();
-  for (int i = 0; i < config.numPorts; i++) {
-    bitSet(portSyncFlagCheck, i);
-  }
+  config.numPorts = tempConfig.numPorts;
+  config.numPorts = tempConfig.numPorts;
+  config.verHi = tempConfig.verHi;
+  config.verLo = tempConfig.verLo;
+  saveConfig();
+
 
 #ifdef PIN_RESET
   pinMode(PIN_RESET, OUTPUT);
@@ -176,7 +261,13 @@ void setup() {
   analogReadResolution(12);
 
 }
-////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// main loop
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void loop() {
   while (udp.parsePacket()) {
     // First read the header to make sure it's Art-Net
@@ -195,8 +286,12 @@ void loop() {
               //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
               //if(poll->TalkToMe & 0x2){
 
+              #ifdef blackOnOpPollTimeOut
+                lastPoll = millis();
+              #endif
+
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, NUM_OF_UNIVERSES_PER_OUT, tempCelsius, fps, avgUniUpdated);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               //}
@@ -208,11 +303,12 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                uint16_t portOffset = port * 128;
+                uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
+
                 //write the dmx data to the Octo frame buffer
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 128; i++) {
-                  LEDS.dmxPixel(i + portOffset, dmxData[i]);
+                  LEDS.setPixel(i + portOffset, dmxData[i]);
                 }
                 numUniUpdated++;
               }
@@ -222,6 +318,10 @@ void loop() {
           // OpSync
           case 0x5200: {
               LEDS.show();
+
+              #ifdef blackOnOpSyncTimeOut
+                lastSync = millis();
+              #endif
 
               // calculate framerate
               currentMillis = millis();
@@ -307,10 +407,49 @@ void loop() {
               break;
             }
         }
+      }else if(memcmp(header->ID, "MadrixN", 8) == 0){
+        LEDS.show();
+
+        #ifdef blackOnOpSyncTimeOut
+          lastSync = millis();
+        #endif
+
+        // calculate framerate
+        currentMillis = millis();
+        if(currentMillis > previousMillis){
+          fps = 1 / ((currentMillis - previousMillis) * 0.001);
+        } else {
+          fps = 0;
+        }
+        previousMillis = currentMillis;
+
+        // calculate average universes Updated
+        avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
+        numUniUpdated = 0;
       }
     }
   }
 
   // read temperature value
   tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
+
+  #ifdef blackOnOpSyncTimeOut
+    currentMillis = millis();
+    if (currentMillis - lastSync > OpSyncTimeOut) {
+      for (int i = 0; i < num_led_per_output * 8; i++) {
+        LEDS.setPixel(i, 0);
+      }
+      LEDS.show();
+    }
+  #endif
+
+  #ifdef blackOnOpPollTimeOut
+    currentMillis = millis();
+    if (currentMillis - lastPoll > OpPollTimeOut) {
+      for (int i = 0; i < num_led_per_output * 8; i++) {
+        LEDS.setPixel(i, 0);
+      }
+      LEDS.show();
+    }
+  #endif
 }
