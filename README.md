@@ -8,17 +8,11 @@ Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Ard
 The code in this repository is available under the MIT License.
 
 ## Installation
-1. Install [Arduino (1.6.11)](https://www.arduino.cc/en/Main/OldSoftwareReleases#previous)
-- Install [Teensyduino (1.30)](https://www.pjrc.com/teensy/td_download.html)
+1. Install [Arduino (1.8.1)](https://www.arduino.cc/)
+- Install [Teensyduino (1.35)](https://www.pjrc.com/teensy/td_download.html)
 - Install [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
 - Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811)
-- Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/Selectable-socket-number)
-- In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt```
-
-	uncoment line 430 ```teensy31.menu.speed.120opt=120 MHz optimize speed (overclock)```
-- In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/cores/teensy3/SPIFIFO.h```
- - add ```#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = 30 MHz``` ```to the #if F_BUS == 60000000 section``` line 73
- - add ```#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = //(56 / 2) * ((1+1)/2) = 28 MHz``` to the ```#if F_BUS == 56000000 section``` line 83
+- Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/1-socket)
 
 - Open Arduino IDE
  - In ```Tools -> Board```  ```Teensy 3.1/3.2```
@@ -32,9 +26,8 @@ The nodes get an calculated IP address from the MAC address accordingly to ArtNe
 
 ## Dependencies
 - [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
-- [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/Selectable-socket-number)
-	modified version with that uses only 1 socket at full memory size
-- [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811) modified to run 4 channel LEDs
+- [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/1-socket)
+- modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811)
 
 
 ## Compatibility
@@ -46,6 +39,11 @@ at over 18 DMX universes it will begin to drop packages
 ---
 
 ## Version history
+
+#### v0.8.7-Beta.1
+- remove FastLED option
+- test with new Ethernet lib
+- test with Arduino 1.8.1 IDE
 
 #### v0.8.6-Beta.1
 ##### New features
