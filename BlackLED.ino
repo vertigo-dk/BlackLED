@@ -187,14 +187,14 @@ void artnetSend(byte* buffer, int length) {
 void blink() {
   #ifdef _use_octoWS2811
   for (int i = 0; i < 8 * num_led_per_output; i++) {
-    LEDS.setPixel(i, 0xFFFFFFFF); //set full white
+    LEDS.setPixel(i, 0xFFFFFF); //set full white
   }
 
   LEDS.show();
 
   delay(300);
   for (int i = 0; i <  8 * num_led_per_output; i++) {
-    LEDS.setPixel(i, 0x00000000); //set 0
+    LEDS.setPixel(i, 0x000000); //set 0
   }
   LEDS.show();
   delay(100);
