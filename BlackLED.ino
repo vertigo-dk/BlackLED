@@ -44,6 +44,17 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+// Servo test stuff
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include <Servo.h>
+Servo myservo;
+#define servoStopVal 91
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // settings error check
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -211,6 +222,15 @@ void saveConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
+  //servo test////////
+  myservo.attach(2);
+  myservo.write(0);
+  delay(100);
+  myservo.write(180);
+  delay(100);
+  myservo.write(servoStopVal);
+  ////////////////////
+
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;
   loadConfig();
@@ -251,10 +271,10 @@ void setup() {
   // Open ArtNet
   node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
 
-  LEDS.begin();
-  LEDS.show();
-
-  blink();
+  // LEDS.begin();
+  // LEDS.show();
+  //
+  // blink();
 
   // to read internal temperature
   analogReference(INTERNAL);
@@ -304,12 +324,15 @@ void loop() {
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
-
-                //write the dmx data to the Octo frame buffer
-                uint32_t* dmxData = (uint32_t*) dmx->Data;
-                for (int i = 0; i < 128; i++) {
-                  LEDS.setPixel(i + portOffset, dmxData[i]);
+                if (portOffset == 0) {
+                  uint8_t chan1Dmx = dmx->Data[0];
+                  myservo.write(map(chan1Dmx, 0, 255, 0, 180));
                 }
+                //write the dmx data to the Octo frame buffer
+                // uint32_t* dmxData = (uint32_t*) dmx->Data;
+                // for (int i = 0; i < 128; i++) {
+                //   LEDS.setPixel(i + portOffset, dmxData[i]);
+                // }
                 numUniUpdated++;
               }
               break;
@@ -317,7 +340,7 @@ void loop() {
 
           // OpSync
           case 0x5200: {
-              LEDS.show();
+              // LEDS.show();
 
               #ifdef blackOnOpSyncTimeOut
                 lastSync = millis();
@@ -408,7 +431,7 @@ void loop() {
             }
         }
       }else if(memcmp(header->ID, "MadrixN", 8) == 0){
-        LEDS.show();
+        // LEDS.show();
 
         #ifdef blackOnOpSyncTimeOut
           lastSync = millis();
@@ -437,9 +460,9 @@ void loop() {
     currentMillis = millis();
     if (currentMillis - lastSync > OpSyncTimeOut) {
       for (int i = 0; i < num_led_per_output * 8; i++) {
-        LEDS.setPixel(i, 0);
+        // LEDS.setPixel(i, 0);
       }
-      LEDS.show();
+      // LEDS.show();
     }
   #endif
 
@@ -447,9 +470,9 @@ void loop() {
     currentMillis = millis();
     if (currentMillis - lastPoll > OpPollTimeOut) {
       for (int i = 0; i < num_led_per_output * 8; i++) {
-        LEDS.setPixel(i, 0);
+        // LEDS.setPixel(i, 0);
       }
-      LEDS.show();
+      // LEDS.show();
     }
   #endif
 }
