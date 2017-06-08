@@ -1,10 +1,10 @@
-////////////////// Panama edition ////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////// Tree.0 edition ////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // initial user defined settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define NUM_OF_OUTPUTS 5
+#define NUM_OF_OUTPUTS 7
 #define MAX_NUM_LED_PER_OUTPUT 240
 #define NUM_CHANNEL_PER_LED 4
 
@@ -157,8 +157,8 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "BLED_RGBW_5_Pan",                           // Short name
-  "BlackLED_RGBW_5_port_Panama",                     // Long name
+  "BLED_RGBW_5_TREE",                           // Short name
+  "BlackLED_RGBW_5_port_TREE.0",                     // Long name
   num_artnet_ports, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
@@ -411,7 +411,7 @@ void loop() {
               #ifdef blackOnOpSyncTimeOut
                 lastSync = millis();
               #endif
-              
+
               // calculate framerate
               currentMillis = millis();
               if(currentMillis > previousMillis){

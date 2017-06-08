@@ -1,4 +1,4 @@
-# BlackLED  - Panama edition
+# BlackLED  - Tree.0 edition
 Software for the BlackLED controller -> branch for the Panama Night club
 
 ## Introduction
@@ -12,7 +12,7 @@ The code in this repository is available under the MIT License.
 - Install [Teensyduino (1.28 or newer)](https://www.pjrc.com/teensy/td_download.html)
 - Install [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
 - Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811)
-- Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/Selectable-socket-number)
+- Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/1-socket)
 - In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt```
 
 	uncoment the line 55 ```teensy31.menu.speed.120opt=120 MHz optimized (overclock)```
