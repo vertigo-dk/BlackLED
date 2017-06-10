@@ -5,7 +5,7 @@
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 7
-#define MAX_NUM_LED_PER_OUTPUT 240
+#define MAX_NUM_LED_PER_OUTPUT 100
 #define NUM_CHANNEL_PER_LED 4
 
 //#define _use_FastLED  //for all types of chips but only 3 channel !!only LPD8806 implemented in code
@@ -372,11 +372,11 @@ void loop() {
               if (port >= 0 && port < config.numPorts) {
                 //Serial.print("incomming port: ");
                 //Serial.print(port);
-                if(port>=4 && port<=7){
+               /* if(port>=4 && port<=7){
                   port+=2;
                 }else if(port>=8){
                   port+=4;
-                }
+                }*/
                 //Serial.print("  remap to: ");
                 //Serial.println(port);
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
