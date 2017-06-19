@@ -51,6 +51,11 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #if F_BUS < 60000000
 #error "Teensy needs to run at 120MHz to read all packets in time"
 #endif
+#if defined(SPI_CLOCK_30MHz)
+  #warning "has 30MHz SPi Clock"
+#else
+  #warning "has 30MHz SPi Clock"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -89,7 +94,7 @@ uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
-const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
+const int LEDconfig = WS2811_RGBW | SK6812_820kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 
