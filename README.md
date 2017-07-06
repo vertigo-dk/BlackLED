@@ -1,5 +1,5 @@
 # BlackLED  - Tree.0 edition
-Software for the BlackLED controller -> branch for the Panama Night club
+Software for the BlackLED controller -> branch for [Tree.0](http://tree0.datavis.dk/)
 
 ## Introduction
 Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Arduino IDE.
@@ -8,22 +8,20 @@ Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Ard
 The code in this repository is available under the MIT License.
 
 ## Installation
-1. Install [Arduino (1.6.8)](https://www.arduino.cc/en/Main/OldSoftwareReleases#previous)
-- Install [Teensyduino (1.28 or newer)](https://www.pjrc.com/teensy/td_download.html)
-- Install [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
-- Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811)
-- Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/1-socket)
-- In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt```
-
+1. Install [Arduino (1.8.1)](https://www.arduino.cc/en/Main/OldSoftwareReleases#previous)
+2. Install [Teensyduino (1.28 or newer)](https://www.pjrc.com/teensy/td_download.html)
+3. Install [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
+4. Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811)
+5. Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/1-socket)
+6. In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/boards.txt```
 	uncoment the line 55 ```teensy31.menu.speed.120opt=120 MHz optimized (overclock)```
-- In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/cores/teensy3/SPIFIFO.h```
- - add ```#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = 30 MHz``` ```to the #if F_BUS == 60000000 section```
- - add ```#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = //(56 / 2) * ((1+1)/2) = 28 MHz``` to the ```#if F_BUS == 56000000 section```
+7. In ```~/Arduino.app/Contents/Java/hardware/teensy/avr/cores/teensy3/SPIFIFO.h```
+8. add ```#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = 30 MHz``` ```to the #if F_BUS == 60000000 section```
+9. add ```#define SPI_CLOCK_30MHz   (SPI_CTAR_PBR(0) | SPI_CTAR_BR(0) | SPI_CTAR_DBR) //(60 / 2) * ((1+1)/2) = //(56 / 2) * ((1+1)/2) = 28 MHz``` to the ```#if F_BUS == 56000000 section```
 
 - Open Arduino IDE
  - In ```Tools -> Board```  ```Teensy 3.1/3.2```
- - in ```Tools -> CPU``` select
-	and 120 MHz optimized (overclock) from  speed
+ - in ```Tools -> CPU``` select 120 MHz optimized (overclock) from the speed section
 
 ## Network setup
 The host computer has to be on the 2.x.x.x network (for example 2.0.0.1), and the subnet must be 255.0.0.0.
