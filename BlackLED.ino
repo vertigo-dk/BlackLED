@@ -63,6 +63,10 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#define CPU_RESTART_ADDR (uint32_t *)0xE000ED0C
+#define CPU_RESTART_VAL 0x5FA0004
+#define CPU_RESTART (*CPU_RESTART_ADDR = CPU_RESTART_VAL);
+
 #define VERSION_HI 0
 #define VERSION_LO 9
 
@@ -376,6 +380,9 @@ void loop() {
                     config.portAddrOut[i] = address->SwOut[i] & 0x7F;
                   }
                 }
+                delay(1000);
+                CPU_RESTART
+
               }
 
               if (address->Command == 0x04) {
