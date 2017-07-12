@@ -3,32 +3,40 @@
 // initial user defined settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define NUM_OF_OUTPUTS 6
-#define MAX_NUM_LED_PER_OUTPUT 360
-#define NUM_CHANNEL_PER_LED 4 // do not change this
 
-//#define blackOnOpSyncTimeOut //recoment more than 20000 ms
-//#define blackOnOpPollTimeOut //recoment more than 20000 ms
-const static uint32_t OpSyncTimeOut = 300000;
-const static uint32_t OpPollTimeOut = 30000;
+//#define MAX_NUM_LED_PER_OUTPUT 360
+// #define NUM_CHANNEL_PER_LED 4 // do not change this
+
+//#define blackOnOpSyncTimeOut
+//#define blackOnOpPollTimeOut
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// definitions calculated from user settings
+// MAX settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
-
-const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
-
-const int num_led_per_output = num_universes_per_output*512/NUM_CHANNEL_PER_LED;
-
-const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
+#define MAX_NUM_ARTNET_PORTS 18
+#define MAX_NUM_LED_PER_OUTPUT 384 //for calculating the max buffer size needs shuld allways be
+#define MAX_NUM_OF_OUTPUTS 8
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// includes and lib
+// default settings
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint32_t OpSyncTimeOut = 300000;//recoment more than 20000 ms
+uint32_t OpPollTimeOut = 30000;//recoment more than 20000 ms
+
+uint16_t num_outputs = 6;
+uint16_t num_led_per_output = 384; //512/NUM_CHANNEL_PER_LED*num_universes_per_output
+uint16_t num_artnet_ports = 18;
+uint16_t num_universes_per_output = 3;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// includes
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -68,7 +76,7 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #define CPU_RESTART (*CPU_RESTART_ADDR = CPU_RESTART_VAL);
 
 #define VERSION_HI 0
-#define VERSION_LO 9
+#define VERSION_LO 10
 
 #define PIN_RESET 9
 
@@ -94,11 +102,10 @@ uint32_t lastSync = 0;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-uint32_t dmxMemory[num_led_per_output * 8];
-DMAMEM uint32_t displayMemory[num_led_per_output * 8];
-uint32_t drawingMemory[num_led_per_output * 8];
+DMAMEM uint32_t displayMemory[MAX_NUM_LED_PER_OUTPUT*8];
+uint32_t drawingMemory[MAX_NUM_LED_PER_OUTPUT*8];
 
-const int LEDconfig = WS2811_RGBW | SK6812_820kHz;
+uint8_t LEDconfig = WS2811_RGBW | SK6812_820kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 
@@ -171,12 +178,12 @@ void blink() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ID of the settings block
-#define CONFIG_VERSION "ls1"
+#define CONFIG_VERSION "ls2"
 
 // Tell it where to store your config data in EEPROM
 #define CONFIG_MEM_START 16
-#define CONFIG_START 17
-#define CONFIG_END 2
+#define CONFIG_START 0
+#define CONFIG_END 0
 
 int oemCode = 0x0000; // OemUnkown
 
@@ -205,11 +212,11 @@ void loadConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void saveConfig() {
-  EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
-  EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
-  EEPROM.write(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
+  EEPROM.update(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
+  EEPROM.update(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
+  EEPROM.update(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
   for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
-    EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
+    EEPROM.update(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
   }
 }
 
