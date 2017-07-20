@@ -5,7 +5,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //#define MAX_NUM_LED_PER_OUTPUT 360
-// #define NUM_CHANNEL_PER_LED 4 // do not change this
+#define NUM_CHANNEL_PER_LED 4 // do not change this
 
 //#define blackOnOpSyncTimeOut
 //#define blackOnOpPollTimeOut
@@ -115,7 +115,33 @@ OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ArtConfig config = {
+// ArtConfig_t config = {
+//   {0xDE, 0xAD, 0xBE, 0x00, 0x00, 0x00}, // MAC - last 3 bytes set by Teensy
+//   {2, 0, 0, 1},                         // IP
+//   {255, 0, 0, 0},                       // Subnet mask
+//   0x1936,                               // UDP port
+//   false,                                // DHCP
+//
+//   // These fields get overwritten by loadConfig:
+//   0, 0,                                 // Net (0-127) and subnet (0-15)
+//   false, //extendedFeatures
+//   0x00FF,//OEMcode
+//   "BlackLED_6",                           // Short name
+//   "BlackLED_6_port",                     // Long name
+//   3, // Number of ports
+//   { PortTypeDmx | PortDirOut,
+//     PortTypeDmx | PortDirOut,
+//     PortTypeDmx | PortDirOut,
+//     PortTypeDmx | PortDirOut
+//   }, // Port types
+//   {0, 0, 0, 0},                         // Port input universes (0-15)
+//   {0, 1, 2, 3},                          // Port output universes (0-15)
+//   1,      //bindIndex
+//   VERSION_HI,
+//   VERSION_LO
+// };
+
+NodeConfig_t config = {
   {0xDE, 0xAD, 0xBE, 0x00, 0x00, 0x00}, // MAC - last 3 bytes set by Teensy
   {2, 0, 0, 1},                         // IP
   {255, 0, 0, 0},                       // Subnet mask
@@ -123,22 +149,21 @@ ArtConfig config = {
   false,                                // DHCP
 
   // These fields get overwritten by loadConfig:
-  0, 0,                                 // Net (0-127) and subnet (0-15)
+  {0, 0, 0, 0, 0, 0, 0, 0},                   // Net (0-127)
+  {0, 0, 0, 0, 0, 0, 0, 0},                   // and subnet (0-15)
+  false, //extendedFeatures
+  0x00FF,//OEMcode
   "BlackLED_6",                           // Short name
   "BlackLED_6_port",                     // Long name
-  num_artnet_ports, // Number of ports
-  { PortTypeDmx | PortTypeOutput,
-    PortTypeDmx | PortTypeOutput,
-    PortTypeDmx | PortTypeOutput,
-    PortTypeDmx | PortTypeOutput
-  }, // Port types
-  {0, 0, 0, 0},                         // Port input universes (0-15)
-  {0, 1, 2, 3},                          // Port output universes (0-15)
+  6, // Number of sub nodes
+  3, // Number of ports in every sub node
+  {0, 3, 6, 9, 12, 15, 0, 0},                          // Port output universes (0-15)
   VERSION_HI,
   VERSION_LO
 };
 
-ArtNodeExtended node;
+// ArtNode node;
+ArtNode node;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -185,7 +210,7 @@ void blink() {
 #define CONFIG_START 0
 #define CONFIG_END 0
 
-int oemCode = 0x0000; // OemUnkown
+int oemCode = 0x00FF; // OemUnkown
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -228,14 +253,15 @@ void saveConfig() {
 
 void setup() {
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
-  ArtConfig tempConfig = config;
-  loadConfig();
-  config.numPorts = tempConfig.numPorts;
-  config.numPorts = tempConfig.numPorts;
-  config.verHi = tempConfig.verHi;
-  config.verLo = tempConfig.verLo;
-  saveConfig();
+  // ArtConfig_t tempConfig = config;
+  // loadConfig();
+  // config.numPorts = tempConfig.numPorts;
+  // config.numPorts = tempConfig.numPorts;
+  // config.verHi = tempConfig.verHi;
+  // config.verLo = tempConfig.verLo;
+  // saveConfig();
 
+  // Serial.begin(115200);
 
 #ifdef PIN_RESET
   pinMode(PIN_RESET, OUTPUT);
@@ -253,7 +279,7 @@ void setup() {
 
   // Calculate IP address
   config.ip[0] = 2;
-  config.ip[1] = config.mac[3] + (oemCode & 0xFF);// + ((oemCode >> 16) & 0xFF);
+  config.ip[1] = config.mac[3] + oemCode;// + ((oemCode >> 16) & 0xFF);
   config.ip[2] = config.mac[4];
   config.ip[3] = config.mac[5];
 
@@ -265,7 +291,11 @@ void setup() {
   udp.begin(config.udpPort);
 
   // Open ArtNet
-  node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
+  node = ArtNode(config, sizeof(udp_buffer), udp_buffer);
+
+  //set up octoWS2811
+  LEDS.setLength(num_led_per_output);
+  LEDS.setType(LEDconfig);
 
   LEDS.begin();
   LEDS.show();
@@ -287,188 +317,129 @@ void setup() {
 void loop() {
   while (udp.parsePacket()) {
     // First read the header to make sure it's Art-Net
-    unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
-    if (n >= sizeof(ArtHeader)) {
-      ArtHeader* header = (ArtHeader*)udp_buffer;
+    unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader_t));
+    if (n >= sizeof(ArtHeader_t)) {
+      ArtHeader_t* header = (ArtHeader_t*)udp_buffer;
       // Check packet ID
       if (memcmp(header->ID, "Art-Net", 8) == 0) {  //is Art-Net
         // Read the rest of the packet
-        udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
+        udp.read(udp_buffer + sizeof(ArtHeader_t), udp.available());
         // Package Op-Code determines type of packet
         switch (header->OpCode) {
-
-          // Poll packet
-          case OpPoll: {
-              //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
-              //if(poll->TalkToMe & 0x2){
-
-              #ifdef blackOnOpPollTimeOut
-                lastPoll = millis();
-              #endif
-
-              float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
-              node.createPollReply(); //create pollReply
-              artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
-              //}
-              break;
+          case OpPoll: {  // Poll packet
+            float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
+            // sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
+            for(int i = 0; i < config.numSubNodes; i++) {
+              node.createPollReply(i); //create pollReply
+              artnetSend(udp_buffer, sizeof(ArtPollReply_t)); //send pollReply
             }
-
-          // DMX packet
-          case OpDmx: {
-              ArtDmx* dmx = (ArtDmx*)udp_buffer;
-              int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
-              if (port >= 0 && port < config.numPorts) {
-                uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
-
-                //write the dmx data to the Octo frame buffer
-                uint32_t* dmxData = (uint32_t*) dmx->Data;
-                for (int i = 0; i < 128; i++) {
-                  LEDS.setPixel(i + portOffset, dmxData[i]);
+            break;
+          }
+          case OpDmx: { // DMX packet
+            ArtDmx_t* dmx = (ArtDmx_t*)udp_buffer;
+            uint16_t len = __builtin_bswap16(dmx->Length);
+            int address = node.getAddress(dmx->SubUni, dmx->Net);
+            // Serial.print("address: ");
+            // Serial.print(address);
+            // Serial.print("\t");
+            for (int i = 0; i < config.numSubNodes; i++) {
+              if(address >= node.getStartAddress(i) && address <= node.getStartAddress(i)+config.numPorts) {
+                int ledOffset = address - node.getStartAddress(i);
+                ledOffset *= 512;
+                ledOffset = ledOffset/NUM_CHANNEL_PER_LED;
+                ledOffset += i * num_led_per_output;
+                // Serial.print("ledOffset: ");
+                // Serial.println(ledOffset);
+                for(int j = 0; j < len; j+=4) {
+                  LEDS.setPixel(ledOffset, dmx->Data[j], dmx->Data[j+1], dmx->Data[j+2], dmx->Data[j+3]);
+                  ledOffset++;
                 }
-                numUniUpdated++;
+                break;
               }
-              break;
             }
-
-          // OpSync
-          case 0x5200: {
-              LEDS.show();
-
-              #ifdef blackOnOpSyncTimeOut
-                lastSync = millis();
-              #endif
-
-              // calculate framerate
-              currentMillis = millis();
-              if(currentMillis > previousMillis){
-                fps = 1 / ((currentMillis - previousMillis) * 0.001);
-              } else {
-                fps = 0;
-              }
-              previousMillis = currentMillis;
-
-              // calculate average universes Updated
-              avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
-              numUniUpdated = 0;
-
-              break;
+            // if (port >= 0 && port < config.numPorts) {
+              // uint16_t portOffset = port/num_universes_per_output;
+              //write the dmx data to the Octo frame buffer
+              // uint32_t* dmxData = (uint32_t*) dmx->Data;
+              // for (int i = 0; i < num_led_per_output; i+=) {
+              //   LEDS.setPixel(i + port, dmxData[i]);
+              // }
+              numUniUpdated++;
+            // }
+            break;
+          }
+          case OpSync: {  // OpSync
+            LEDS.show();
+            // calculate framerate
+            currentMillis = millis();
+            if(currentMillis > previousMillis){
+              fps = 1 / ((currentMillis - previousMillis) * 0.001);
+            } else {
+              fps = 0;
             }
+            previousMillis = currentMillis;
+
+            // calculate average universes Updated
+            avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
+            numUniUpdated = 0;
+
+            break;
+          }
 
           // OpAddress
           case OpAddress: {
+/*
+            ArtAddress_t * address = (ArtAddress_t*)udp_buffer;
 
-              T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
-
-              if (address->LongName[0] != 0) {
-                memcpy(config.longName, address->LongName, 64);
+            if (address->LongName[0] != 0) {
+              memcpy(config.longName, address->LongName, 64);
+            }
+            if (address->ShortName[0] != 0) {
+              memcpy(config.shortName, address->ShortName, 18);
+            }
+            if (address->NetSwitch != 0x7F) {               // Use value 0x7f for no change.
+              if ((address->NetSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
+                config.net = address->NetSwitch & 0x7F;
               }
-              if (address->ShortName[0] != 0) {
-                memcpy(config.shortName, address->ShortName, 18);
+            }
+            if (address->SubSwitch != 0x7F) {               // Use value 0x7f for no change.
+              if ((address->SubSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
+                config.subnet = address->SubSwitch & 0x7F;
               }
-              if (address->NetSwitch != 0x7F) {               // Use value 0x7f for no change.
-                if ((address->NetSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
-                  config.net = address->NetSwitch & 0x7F;
+            }
+            for (int i = 0; i < 4; i++) {
+              if (address->SwIn[i] != 0x7F) {
+                if ((address->SwIn[i] & 0x80) == 0x80) {
+                  config.portAddrIn[i] = address->SwIn[i] & 0x7F;
                 }
               }
-              if (address->SubSwitch != 0x7F) {               // Use value 0x7f for no change.
-                if ((address->SubSwitch & 0x80) == 0x80) { // This value is ignored unless bit 7 is high. i.e. to program a  value 0x07, send the value as 0x87.
-                  config.subnet = address->SubSwitch & 0x7F;
+              if (address->SwOut[i] != 0x7F) {
+                if ((address->SwOut[i] & 0x80) == 0x80) {
+                  config.portAddrOut[i] = address->SwOut[i] & 0x7F;
                 }
               }
-              for (int i = 0; i < 4; i++) {
-                if (address->SwIn[i] != 0x7F) {
-                  if ((address->SwIn[i] & 0x80) == 0x80) {
-                    config.portAddrIn[i] = address->SwIn[i] & 0x7F;
-                  }
-                }
-                if (address->SwOut[i] != 0x7F) {
-                  if ((address->SwOut[i] & 0x80) == 0x80) {
-                    config.portAddrOut[i] = address->SwOut[i] & 0x7F;
-                  }
-                }
-                delay(1000);
-                CPU_RESTART
+              delay(1000);
+              CPU_RESTART
 
-              }
-
-              if (address->Command == 0x04) {
-                locateMode = true;
-              } else {
-                locateMode = false;
-              }
-              node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
-              saveConfig();
-              loadConfig();
-              node.createPollReply();
-              artnetSend(udp_buffer, sizeof(ArtPollReply));
-              //node.createExtendedPollReply();
-              //artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
-              break;
             }
 
-          // Unhandled packet
-          default: {
-              break;
+            if (address->Command == 0x04) {
+              locateMode = true;
+            } else {
+              locateMode = false;
             }
+            saveConfig();
+            loadConfig();
+            node.createPollReply();
+            artnetSend(udp_buffer, sizeof(ArtPollReply_t));*/
+            break;
+
+          }
+          default: { // Unhandled packet
+            break;
+          }
         }
-
-        // answer routine for Art-Net Extended
-      } else if (memcmp(header->ID, "Art-Ext", 8) == 0) {
-        // Read the rest of the packet
-        udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
-        // Package Op-Code determines type of packet
-        switch (header->OpCode) {
-          // ArtNet Frame Extension
-          case OpPoll | 0x0001: {
-              node.createExtendedPollReply();
-              artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
-              break;
-            }
-        }
-      }else if(memcmp(header->ID, "MadrixN", 8) == 0){
-        LEDS.show();
-
-        #ifdef blackOnOpSyncTimeOut
-          lastSync = millis();
-        #endif
-
-        // calculate framerate
-        currentMillis = millis();
-        if(currentMillis > previousMillis){
-          fps = 1 / ((currentMillis - previousMillis) * 0.001);
-        } else {
-          fps = 0;
-        }
-        previousMillis = currentMillis;
-
-        // calculate average universes Updated
-        avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
-        numUniUpdated = 0;
       }
     }
   }
-
-  // read temperature value
-  tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
-
-  #ifdef blackOnOpSyncTimeOut
-    currentMillis = millis();
-    if (currentMillis - lastSync > OpSyncTimeOut) {
-      for (int i = 0; i < num_led_per_output * 8; i++) {
-        LEDS.setPixel(i, 0);
-      }
-      LEDS.show();
-    }
-  #endif
-
-  #ifdef blackOnOpPollTimeOut
-    currentMillis = millis();
-    if (currentMillis - lastPoll > OpPollTimeOut) {
-      for (int i = 0; i < num_led_per_output * 8; i++) {
-        LEDS.setPixel(i, 0);
-      }
-      LEDS.show();
-    }
-  #endif
 }
