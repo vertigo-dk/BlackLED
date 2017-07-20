@@ -201,11 +201,11 @@ void loadConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void saveConfig() {
-  EEPROM.write(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
-  EEPROM.write(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
-  EEPROM.write(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
+  EEPROM.update(CONFIG_MEM_START + 0, CONFIG_VERSION[0]);
+  EEPROM.update(CONFIG_MEM_START + 1, CONFIG_VERSION[1]);
+  EEPROM.update(CONFIG_MEM_START + 2, CONFIG_VERSION[2]);
   for (unsigned int t = CONFIG_START; t < sizeof(config) - CONFIG_END; t++) {
-    EEPROM.write(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
+    EEPROM.update(CONFIG_MEM_START + t - CONFIG_START + 3, *((char*)&config + t));
   }
 }
 
