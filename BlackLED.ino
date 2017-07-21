@@ -8,9 +8,9 @@
 #define NUM_CHANNEL_PER_LED 4 // do not change this
 
 //#define blackOnOpSyncTimeOut //recoment more than 20000 ms
-//#define blackOnOpPollTimeOut //recoment more than 20000 ms
+#define blackOnOpPollTimeOut //recoment more than 20000 ms
 const static uint32_t OpSyncTimeOut = 300000;
-const static uint32_t OpPollTimeOut = 30000;
+const static uint32_t OpPollTimeOut = 300000;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -113,8 +113,8 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "BlackLED_6",                           // Short name
-  "BlackLED_6_port",                     // Long name
+  "Vallensbæk_",                           // Short name
+  "Vallensbæk_",                     // Long name
   num_artnet_ports, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
@@ -216,7 +216,7 @@ void saveConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
+  // saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;
   loadConfig();
   config.numPorts = tempConfig.numPorts;
