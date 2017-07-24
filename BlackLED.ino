@@ -167,7 +167,7 @@ void blink() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ID of the settings block
-#define CONFIG_VERSION "ls1"
+#define CONFIG_VERSION "ls2"
 
 // Tell it where to store your config data in EEPROM
 #define CONFIG_MEM_START 16
