@@ -113,8 +113,8 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "Vallensbæk_",                           // Short name
-  "Vallensbæk_",                     // Long name
+  "Vallens_",                           // Short name
+  "Vallens_",                     // Long name
   num_artnet_ports, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
