@@ -3,12 +3,12 @@
 // initial user defined settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define NUM_OF_OUTPUTS 2
-#define MAX_NUM_LED_PER_OUTPUT 360
+#define NUM_OF_OUTPUTS 8
+#define MAX_NUM_LED_PER_OUTPUT 128
 #define NUM_CHANNEL_PER_LED 4 // do not change this
 
 //#define blackOnOpSyncTimeOut //recoment more than 20000 ms
-#define blackOnOpPollTimeOut //recoment more than 20000 ms
+//#define blackOnOpPollTimeOut //recoment more than 20000 ms
 const static uint32_t OpSyncTimeOut = 300000;
 const static uint32_t OpPollTimeOut = 300000;
 
@@ -94,7 +94,7 @@ uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
-const int LEDconfig = WS2811_RGBW | SK6812_820kHz;
+const int LEDconfig = WS2811_RGBW | SK6812_800kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 
@@ -306,17 +306,20 @@ void loop() {
           // DMX packet
           case OpDmx: {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
-              int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
+              int port = node.getAddress(dmx->SubUni, dmx->Net);// - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
 
                 //write the dmx data to the Octo frame buffer
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
+                int j = 0;
                 for (int i = 0; i < 128; i++) {
-                  LEDS.setPixel(i + portOffset, dmxData[i]);
+                  LEDS.setPixel(i + portOffset, dmx->Data[j+1], dmx->Data[j], dmx->Data[j+2], dmx->Data[j+3]);//dmx->Data[j+3], dmx->Data[j], dmx->Data[j+1], dmx->Data[j+2]);
+                  j += 4;
                 }
                 numUniUpdated++;
               }
+              LEDS.show();
               break;
             }
 
