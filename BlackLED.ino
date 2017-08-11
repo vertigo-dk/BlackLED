@@ -279,6 +279,14 @@ void loop() {
   if (uniReceived == 0xFF) {
     LEDS.show();
     uniReceived = 0;
+    // calculate framerate
+    currentMillis = millis();
+    if(currentMillis > previousMillis){
+      fps = 1 / ((currentMillis - previousMillis) * 0.001);
+    } else {
+      fps = 0;
+    }
+    previousMillis = currentMillis;
   }
   while (udp.parsePacket()) {
     // First read the header to make sure it's Art-Net
