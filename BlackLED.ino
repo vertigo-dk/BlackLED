@@ -217,7 +217,7 @@ void saveConfig() {
 
 void setup() {
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
-  ArtConfig tempConfig = config;
+  ArtConfig tempConfig = config;  // save the Firmeware state
   loadConfig();
   config.numPorts = tempConfig.numPorts;
   config.numPorts = tempConfig.numPorts;
