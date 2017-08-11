@@ -84,6 +84,8 @@ unsigned long previousMillis = 0;
 uint32_t lastPoll = 0;
 uint32_t lastSync = 0;
 
+uint8_t uniReceived = 0;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // octoWS2811
@@ -274,6 +276,10 @@ void setup() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
+  if (uniReceived == 0xFF) {
+    LEDS.show();
+    uniReceived = 0;
+  }
   while (udp.parsePacket()) {
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
@@ -309,7 +315,7 @@ void loop() {
               int port = node.getAddress(dmx->SubUni, dmx->Net);// - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
-
+                uniReceived |= 1 << port;
                 //write the dmx data to the Octo frame buffer
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
                 int j = 0;
@@ -319,7 +325,6 @@ void loop() {
                 }
                 numUniUpdated++;
               }
-              LEDS.show();
               break;
             }
 
