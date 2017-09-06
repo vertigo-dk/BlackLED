@@ -7,10 +7,10 @@
 #define MAX_NUM_LED_PER_OUTPUT 360
 #define NUM_CHANNEL_PER_LED 4 // do not change this
 
-//#define blackOnOpSyncTimeOut //recoment more than 20000 ms
+#define blackOnOpSyncTimeOut //recoment more than 20000 ms
 //#define blackOnOpPollTimeOut //recoment more than 20000 ms
-const static uint32_t OpSyncTimeOut = 300000;
-const static uint32_t OpPollTimeOut = 30000;
+const static uint32_t OpSyncTimeOut = 20;
+const static uint32_t OpPollTimeOut = 20;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -311,9 +311,9 @@ void loop() {
                 uint16_t portOffset = port * 512/NUM_CHANNEL_PER_LED;
 
                 //write the dmx data to the Octo frame buffer
-                uint32_t* dmxData = (uint32_t*) dmx->Data;
-                for (int i = 0; i < 128; i++) {
-                  LEDS.setPixel(i + portOffset, dmxData[i]);
+                uint8_t* dmxData = (uint8_t*) dmx->Data;
+                for (int i = 0; i < 512; i+=4) {
+                  LEDS.setPixel((i/4) + portOffset, dmxData[i+1], dmxData[i], dmxData[i+2], dmxData[i+3]);//dmxData[i], dmxData[i], dmxData[i]);
                 }
                 numUniUpdated++;
               }
@@ -441,9 +441,9 @@ void loop() {
   #ifdef blackOnOpSyncTimeOut
     currentMillis = millis();
     if (currentMillis - lastSync > OpSyncTimeOut) {
-      for (int i = 0; i < num_led_per_output * 8; i++) {
-        LEDS.setPixel(i, 0);
-      }
+      // for (int i = 0; i < num_led_per_output * 8; i++) {
+      //   LEDS.setPixel(i, 0);
+      // }
       LEDS.show();
     }
   #endif
