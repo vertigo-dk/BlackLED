@@ -7,10 +7,11 @@
 #define MAX_NUM_LED_PER_OUTPUT 360
 #define NUM_CHANNEL_PER_LED 4 // do not change this
 
-#define blackOnOpSyncTimeOut //recoment more than 20000 ms
+// #define blackOnOpSyncTimeOut //recoment more than 20000 ms
 //#define blackOnOpPollTimeOut //recoment more than 20000 ms
-const static uint32_t OpSyncTimeOut = 20;
-const static uint32_t OpPollTimeOut = 20;
+#define internalSync 20 //20ms = 50 HZ
+const static uint32_t OpSyncTimeOut = 30000;
+const static uint32_t OpPollTimeOut = 30000;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -94,7 +95,7 @@ uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
-const int LEDconfig = WS2811_RGBW | SK6812_820kHz;
+const int LEDconfig = WS2811_RGBW | SK6812_800kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 
@@ -321,6 +322,7 @@ void loop() {
             }
 
           // OpSync
+          #ifndef internalSync
           case 0x5200: {
               LEDS.show();
 
@@ -343,6 +345,7 @@ void loop() {
 
               break;
             }
+            #endif
 
           // OpAddress
           case OpAddress: {
@@ -437,19 +440,25 @@ void loop() {
 
   // read temperature value
   tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
+  currentMillis = millis();
+
+  #ifdef internalSync
+    if (currentMillis - lastSync > internalSync) {
+      LEDS.show();
+      lastSync = millis();
+    }
+  #endif
 
   #ifdef blackOnOpSyncTimeOut
-    currentMillis = millis();
     if (currentMillis - lastSync > OpSyncTimeOut) {
-      // for (int i = 0; i < num_led_per_output * 8; i++) {
-      //   LEDS.setPixel(i, 0);
-      // }
+      for (int i = 0; i < num_led_per_output * 8; i++) {
+        LEDS.setPixel(i, 0);
+      }
       LEDS.show();
     }
   #endif
 
   #ifdef blackOnOpPollTimeOut
-    currentMillis = millis();
     if (currentMillis - lastPoll > OpPollTimeOut) {
       for (int i = 0; i < num_led_per_output * 8; i++) {
         LEDS.setPixel(i, 0);
