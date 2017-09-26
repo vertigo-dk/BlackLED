@@ -39,7 +39,7 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 
 #include <OctoWS2811.h>
 
-#include "TeensyMAC.h"
+#include <TeensyMAC.h>
 #include <EEPROM.h>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,7 +108,7 @@ OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ArtConfig config = {
-  {0xDE, 0xAD, 0xBE, 0x00, 0x00, 0x00}, // MAC - last 3 bytes set by Teensy
+  {0,0,0,0,0,0}, // MAC - last 3 bytes set by Teensy
   {2, 0, 0, 1},                         // IP
   {255, 0, 0, 0},                       // Subnet mask
   0x1936,                               // UDP port
@@ -237,11 +237,17 @@ void setup() {
   delay(150);
 #endif
 
+  delay(200);
   // Read MAC address
-  mac_addr mac;
-  for (int i = 3; i < 6; i++) {
-    config.mac[i] = mac.m[i];
-  }
+  uint64_t mac_addr = teensyMAC();
+  Serial.printf("%x\n", mac_addr);
+
+  config.mac[0] = (mac_addr >> 8*5) & 0xFF;
+  config.mac[1] = (mac_addr >> 8*4) & 0xFF;
+  config.mac[2] = (mac_addr >> 8*3) & 0xFF;
+  config.mac[3] = (mac_addr >> 8*2) & 0xFF;
+  config.mac[4] = (mac_addr >> 8*1) & 0xFF;
+  config.mac[5] = (mac_addr >> 8*0) & 0xFF;
 
   // Calculate IP address
   config.ip[0] = 2;
