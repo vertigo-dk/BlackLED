@@ -90,7 +90,6 @@ uint32_t lastSync = 0;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-uint32_t dmxMemory[num_led_per_output * 8];
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
