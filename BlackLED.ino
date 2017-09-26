@@ -66,7 +66,11 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #define VERSION_HI 0
 #define VERSION_LO 9
 
+#if defined(__MK66FX1M0__)
+#define PIN_RESET 24
+#else
 #define PIN_RESET 9
+#endif
 
 EthernetUDP udp;
 uint8_t udp_buffer[600];
@@ -93,7 +97,7 @@ uint32_t lastSync = 0;
 DMAMEM uint32_t displayMemory[num_led_per_output * 8];
 uint32_t drawingMemory[num_led_per_output * 8];
 
-const int LEDconfig = WS2811_RGBW | SK6812_820kHz;
+const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
 
 OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 
