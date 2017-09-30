@@ -3,8 +3,8 @@
 // initial user defined settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define NUM_OF_OUTPUTS 6
-#define MAX_NUM_LED_PER_OUTPUT 360
+#define NUM_OF_OUTPUTS 16
+#define MAX_NUM_LED_PER_OUTPUT 128
 #define NUM_CHANNEL_PER_LED 4 // do not change this
 
 //#define blackOnOpSyncTimeOut //recoment more than 20000 ms
@@ -94,8 +94,8 @@ uint32_t lastSync = 0;
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-DMAMEM uint32_t displayMemory[num_led_per_output * 8];
-uint32_t drawingMemory[num_led_per_output * 8];
+DMAMEM uint32_t displayMemory[num_led_per_output * 16];
+uint32_t drawingMemory[num_led_per_output * 16];
 
 const int LEDconfig = WS2811_RGBW | WS2811_800kHz;
 
