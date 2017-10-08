@@ -1,8 +1,8 @@
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // initial user defined settings
 //
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 #define NUM_OF_OUTPUTS 16
 #define MAX_NUM_LED_PER_OUTPUT 128
 #define NUM_CHANNEL_PER_LED 4 // do not change this
@@ -276,11 +276,11 @@ void setup() {
 
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // main loop
 //
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
   while (udp.parsePacket()) {
@@ -310,9 +310,7 @@ void loop() {
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               //}
               break;
-            }
-
-          // DMX packet
+            }//OpPoll
           case OpDmx: {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
@@ -327,10 +325,8 @@ void loop() {
                 numUniUpdated++;
               }
               break;
-            }
-
-          // OpSync
-          case 0x5200: {
+            }//OpDMX
+          case OpSync: {
               LEDS.show();
 
               #ifdef blackOnOpSyncTimeOut
@@ -351,9 +347,7 @@ void loop() {
               numUniUpdated = 0;
 
               break;
-            }
-
-          // OpAddress
+            }//OpSync
           case OpAddress: {
 
               T_ArtAddress * address = (T_ArtAddress*)udp_buffer;
@@ -400,14 +394,13 @@ void loop() {
               //node.createExtendedPollReply();
               //artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
               break;
-            }
+          }
 
           // Unhandled packet
           default: {
               break;
             }
-        }
-
+        }//switch
         // answer routine for Art-Net Extended
       } else if (memcmp(header->ID, "Art-Ext", 8) == 0) {
         // Read the rest of the packet
