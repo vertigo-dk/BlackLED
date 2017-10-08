@@ -391,8 +391,8 @@ void loop() {
               loadConfig();
               node.createPollReply();
               artnetSend(udp_buffer, sizeof(ArtPollReply));
-              //node.createExtendedPollReply();
-              //artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
+              node.createExtendedPollReply();
+              artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
               break;
           }
 
