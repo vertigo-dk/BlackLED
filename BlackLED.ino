@@ -108,7 +108,7 @@ OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ArtConfig config = {
-  {0,0,0,0,0,0}, // MAC - last 3 bytes set by Teensy
+  {0xDE, 0xAD, 0xBE, 0x00, 0x00, 0x00}, // MAC - last 3 bytes set by Teensy
   {2, 0, 0, 1},                         // IP
   {255, 0, 0, 0},                       // Subnet mask
   0x1936,                               // UDP port
@@ -177,6 +177,8 @@ void blink() {
 #define CONFIG_START 17
 #define CONFIG_END 2
 
+#define MAC_CONFIG 1000
+
 int oemCode = 0x0000; // OemUnkown
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -219,13 +221,31 @@ void saveConfig() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
-  saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
+
+  uint8_t mac[6];
+  teensyMAC(mac);
+  if (mac[5] != 0) {
+    for (uint8_t i = 0; i < 6; ++i) {
+    EEPROM.write(MAC_CONFIG + i, mac[i]);
+    }
+  }else{
+    for (uint8_t i = 0; i < 6; ++i) {
+      mac[i] = EEPROM.read(MAC_CONFIG + i);
+    }
+  }
+
+  for (uint8_t i = 0; i < 6; ++i) {
+   config.mac[i] = EEPROM.read(MAC_CONFIG + i);
+  }
+
+  //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;  // save the Firmeware state
   loadConfig();
   config.numPorts = tempConfig.numPorts;
   config.numPorts = tempConfig.numPorts;
   config.verHi = tempConfig.verHi;
   config.verLo = tempConfig.verLo;
+
   saveConfig();
 
 
@@ -238,9 +258,6 @@ void setup() {
 #endif
 
   delay(200);
-  // Read MAC address
-
-  teensyMAC(config.mac);
 
   // Calculate IP address
   config.ip[0] = 2;
