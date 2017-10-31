@@ -239,15 +239,8 @@ void setup() {
 
   delay(200);
   // Read MAC address
-  uint64_t mac_addr = teensyMAC();
-  Serial.printf("%x\n", mac_addr);
 
-  config.mac[0] = (mac_addr >> 8*5) & 0xFF;
-  config.mac[1] = (mac_addr >> 8*4) & 0xFF;
-  config.mac[2] = (mac_addr >> 8*3) & 0xFF;
-  config.mac[3] = (mac_addr >> 8*2) & 0xFF;
-  config.mac[4] = (mac_addr >> 8*1) & 0xFF;
-  config.mac[5] = (mac_addr >> 8*0) & 0xFF;
+  teensyMAC(config.mac);
 
   // Calculate IP address
   config.ip[0] = 2;
