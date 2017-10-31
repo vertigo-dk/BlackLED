@@ -438,8 +438,12 @@ void loop() {
   }
 
   // read temperature value
+  #if defined(__MK66FX1M0__)
+  tempVal = analogRead(70) * 0.01 + tempVal * 0.99;
+  #else
   tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
-
+  #endif
+  
   #ifdef blackOnOpSyncTimeOut
     currentMillis = millis();
     if (currentMillis - lastSync > OpSyncTimeOut) {
