@@ -333,12 +333,14 @@ void loop() {
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
-                uint16_t portOffset = port * 341;
+                if (port >= 4) port += 2;
+                if (port >= 10) port += 2;
+                uint16_t portOffset = port * 170;
 
                 //write the dmx data to the Octo frame buffer
                 uint32_t* dmxData = (uint32_t*) dmx->Data;
-                for (int i = 0; i < 341; i++) {
-                  LEDS.setPixel(i + portOffset, dmx->Data[i], dmx->Data[i*2], dmx->Data[i*3]);
+                for (int i = 0; i < 170; i++) {
+                  LEDS.setPixel(i + portOffset, dmx->Data[i*3], dmx->Data[i*3+1], dmx->Data[i*3+2]);
                 }
                 numUniUpdated++;
               }
