@@ -281,7 +281,7 @@ void setup() {
   LEDS.begin();
   LEDS.show();
 
-  blink();
+  // blink();
 
   // to read internal temperature
   analogReference(INTERNAL);
