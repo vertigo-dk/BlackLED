@@ -334,7 +334,7 @@ void loop() {
             }
 
           // OpSync
-          case 0x5200: {
+          case OpSync: {
               LEDS.show();
 
               #ifdef blackOnOpSyncTimeOut
