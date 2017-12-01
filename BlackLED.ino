@@ -107,6 +107,16 @@ OctoWS2811 LEDS(num_led_per_output, displayMemory, drawingMemory, LEDconfig);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+// The Wave
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint16_t OSCoutPort = 49161;
+#define beam_break_pin 23
+uint8_t  beam_break_stat = 1;
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // Art-Net config
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -229,6 +239,10 @@ void saveConfig() {
 char line[200];
 
 void setup() {
+  //-----the wave------
+  pinMode(beam_break_pin, INPUT_PULLUP);
+// String startAddr = String(node.getStartAddress(), DEC);
+//--------------------
   // Serial.begin(115200);
   // delay(2000);
   // Serial.println("fw_teensy3.1");
@@ -296,6 +310,38 @@ void setup() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void loop() {
+  //-----the wave------
+  if(digitalRead(beam_break_pin) != beam_break_stat) {
+
+    beam_break_stat = digitalRead(beam_break_pin);
+    //char addr[15];
+    //oscAddr.toCharArray(addr, 15);
+    char oscStr[23] = {0x2f, 0x42, 0x65, 0x61, 0x6d, 0x42, 0x72, 0x65, 0x61, 0x6b, 0x2f, 0x30, 0x30, 0x30, 0x00, 0x00, 0x2c, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    char dig3;
+    char dig2;
+    char dig1;
+    int addrINT = node.getStartAddress();
+    dig3 = addrINT/100;
+    dig2 = (addrINT-(dig3*100))/10;
+    dig1 = addrINT-(dig3*100)-(dig2*10);
+
+    oscStr[11] = dig3 + 0x30;
+    oscStr[12] = dig2 + 0x30;
+    oscStr[13] = dig1 + 0x30;
+    //memcpy(&oscStr+11, addrCHAR, 3);
+    udp.beginPacket(IPAddress(2, 0, 0, 1), OSCoutPort);
+    udp.write(oscStr, 23);
+    udp.write(beam_break_stat);
+    udp.endPacket();
+    /*OSCMessage msg(addr);
+    msg.add(beam_break_stat);
+    udp.beginPacket(IPAddress(2, 0, 0, 1), OSCoutPort);
+    msg.send(udp);
+    udp.endPacket();
+    msg.empty();*/
+  }
+  //-----------------
   while (udp.parsePacket()) {
     // Serial.println("udp");
     // First read the header to make sure it's Art-Net
@@ -338,7 +384,7 @@ void loop() {
                 uint16_t portOffset = port * 170;
 
                 //write the dmx data to the Octo frame buffer
-                uint32_t* dmxData = (uint32_t*) dmx->Data;
+                //uint32_t* dmxData = (uint32_t*) dmx->Data;
                 for (int i = 0; i < 170; i++) {
                   LEDS.setPixel(i + portOffset, dmx->Data[i*3], dmx->Data[i*3+1], dmx->Data[i*3+2]);
                 }
