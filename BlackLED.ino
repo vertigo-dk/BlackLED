@@ -51,11 +51,6 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #if F_BUS < 60000000
 #error "Teensy needs to run at 120MHz to read all packets in time"
 #endif
-#if defined(SPI_CLOCK_30MHz)
-  #warning "has 30MHz SPi Clock"
-#else
-  #warning "has 30MHz SPi Clock"
-#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
