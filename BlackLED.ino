@@ -86,7 +86,11 @@ unsigned long previousMillis = 0;
 uint32_t lastPoll = 0;
 uint32_t lastSync = 0;
 
-boolean firmware_update_in_progress = false;
+uint8_t options = 0;
+
+#define internalSyncFlag 0b00000001
+
+bool firmware_update_in_progress = false;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -225,9 +229,9 @@ void saveConfig() {
 char line[200];
 
 void setup() {
-  Serial.begin(115200);
+  // Serial.begin(115200);
   delay(2000);
-  Serial.println("fw_teensy3.1");
+  // Serial.println("fw_teensy3.1");
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;  // save the Firmeware state
   loadConfig();
@@ -249,7 +253,7 @@ void setup() {
   delay(200);
   // Read MAC address
   uint64_t mac_addr = teensyMAC();
-  Serial.printf("%x\n", mac_addr);
+  // Serial.printf("%x\n", mac_addr);
 
   config.mac[0] = (mac_addr >> 8*5) & 0xFF;
   config.mac[1] = (mac_addr >> 8*4) & 0xFF;
@@ -293,14 +297,14 @@ void setup() {
 
 void loop() {
   while (udp.parsePacket()) {
-    Serial.println("udp");
+    // Serial.println("udp");
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
     if (n >= sizeof(ArtHeader)) {
       ArtHeader* header = (ArtHeader*)udp_buffer;
       // Check packet ID
       if (memcmp(header->ID, "Art-Net", 8) == 0) {  //is Art-Net
-        Serial.println("Art-Net");
+        // Serial.println("Art-Net");
         // Read the rest of the packet
         udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
         // Package Op-Code determines type of packet
@@ -308,7 +312,7 @@ void loop() {
 
           // Poll packet
           case OpPoll: {
-            Serial.println("poll");
+            // Serial.println("poll");
               //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
               //if(poll->TalkToMe & 0x2){
 
@@ -410,23 +414,23 @@ void loop() {
               break;
             }
           case OpFirmwareMaster: {
-            Serial.println("OpFirmwareMaster");
+            // Serial.println("OpFirmwareMaster");
             if (firmware_update_in_progress == false) {
               int ret  = FirmwareFlasher.prepare_flash();
               if (ret == 0) {
                 firmware_update_in_progress = true;
-                Serial.println("GOOD");
+                // Serial.println("GOOD");
                 udp.stop();
                 udp.begin(8050);
               }else {
-                Serial.print("BAD  ");
-                Serial.println(ret);
-                Serial.print("\n RESTART \n");
+                // Serial.print("BAD  ");
+                // Serial.println(ret);
+                // Serial.print("\n RESTART \n");
                 delay(1000);
                 CPU_RESTART;
               }
             }else {
-              Serial.print("\n RESTART \n");
+              // Serial.print("\n RESTART \n");
               CPU_RESTART;
             }
             break;
@@ -514,7 +518,7 @@ void loop() {
   #endif
 
   if (firmware_update_in_progress == true) {
-    Serial.print("whating for firmware");
+    // Serial.print("whating for firmware");
     udp.beginPacket(IPAddress(2,0,0,1), 8050);
     udp.write(10);
     udp.endPacket();
@@ -525,13 +529,13 @@ void loop() {
         if (n >= 15) {
           if (memcmp(udp_buffer, "firmware_line__", 15) == 0) {
             unsigned int m = udp.read(udp_buffer, 400);
-            Serial.printf("length_%d\n", m);
+            // Serial.printf("length_%d\n", m);
             for (int i = 0; i < m; i++) {
               if (udp_buffer[i] == '\n') {
                 line[i] = 0;
-                Serial.printf(" EOL\n" );
+                // Serial.printf(" EOL\n" );
                 if (FirmwareFlasher.flash_hex_line(line) != 0) {
-                  Serial.printf("error\n");
+                  // Serial.printf("error\n");
                 }else {
                   udp.beginPacket(udp.remoteIP(), udp.remotePort());
                   udp.write(10);
@@ -539,7 +543,7 @@ void loop() {
                 }
               }else {
                 line[i] = udp_buffer[i];
-                Serial.printf("%c", line[i]);
+                // Serial.printf("%c", line[i]);
               }
             }
           }
@@ -547,7 +551,7 @@ void loop() {
       }
       delay(1);
     }
-      Serial.print("\n RESTART \n");
+      // Serial.print("\n RESTART \n");
     CPU_RESTART;
   }
 }
