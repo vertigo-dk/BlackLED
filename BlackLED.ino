@@ -86,10 +86,6 @@ unsigned long previousMillis = 0;
 uint32_t lastPoll = 0;
 uint32_t lastSync = 0;
 
-uint8_t options = 0;
-
-#define internalSyncFlag 0b00000001
-
 bool firmware_update_in_progress = false;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -320,11 +316,13 @@ void loop() {
                 lastPoll = millis();
               #endif
 
+              // read temperature value
+              tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;options;%d", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated, options);
+
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;options;%d", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
-              //}
               break;
             }
 
@@ -453,33 +451,11 @@ void loop() {
               node.createExtendedPollReply();
               artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
               break;
-            }
+          }
         }
-      }else if(memcmp(header->ID, "MadrixN", 8) == 0){
-        LEDS.show();
-
-        #ifdef blackOnOpSyncTimeOut
-          lastSync = millis();
-        #endif
-
-        // calculate framerate
-        currentMillis = millis();
-        if(currentMillis > previousMillis){
-          fps = 1 / ((currentMillis - previousMillis) * 0.001);
-        } else {
-          fps = 0;
-        }
-        previousMillis = currentMillis;
-
-        // calculate average universes Updated
-        avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
-        numUniUpdated = 0;
       }
     }
   }
-
-  // read temperature value
-  tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
 
   if (options & internalSyncFlag && currentMillis - previousMillis > internalFps) {
     LEDS.show();
@@ -518,7 +494,6 @@ void loop() {
   #endif
 
   if (firmware_update_in_progress == true) {
-    // Serial.print("whating for firmware");
     udp.beginPacket(IPAddress(2,0,0,1), 8050);
     udp.write(10);
     udp.endPacket();
