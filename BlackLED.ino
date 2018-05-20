@@ -62,7 +62,7 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define VERSION_HI 0
-#define VERSION_LO 9
+#define VERSION_LO 10
 
 #if defined(__MK66FX1M0__)
 #define PIN_RESET 24
