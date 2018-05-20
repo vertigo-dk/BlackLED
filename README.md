@@ -8,16 +8,15 @@ Code for the Teensy 3.1/3.2 running the BlackLED controller. Compatible with Ard
 The code in this repository is available under the MIT License.
 
 ## Installation
-1. Install [Arduino (1.8.1)](https://www.arduino.cc/)
-- Install [Teensyduino (1.35)](https://www.pjrc.com/teensy/td_download.html)
-- Install [ArtNode lib](https://github.com/vertigo-dk/ArtNode)
-- Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811)
-- Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/1-socket)
+  1. Install [Arduino (1.8.1)](https://www.arduino.cc/)
+  2. Install [Teensyduino (1.35)](https://www.pjrc.com/teensy/td_download.html)
+  3. Install [ArtNode lib](https://github.com/alex-Arc/ArtNode/tree/firmware)
+  4. Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811/tree/RGBW)
+  5. Install modified [Ethernet lib](https://github.com/alex-Arc/Ethernet/tree/1-socket)
 
 - Open Arduino IDE
- - In ```Tools -> Board```  ```Teensy 3.1/3.2```
- - in ```Tools -> CPU speed``` select
-	and 120 MHz optimized speed (overclock)
+  - In ```Tools -> Board```  ```Teensy 3.1/3.2```
+  - in ```Tools -> CPU speed``` select 120 MHz(overclock)
 
 ## Network setup
 The host computer has to be on the 2.x.x.x network (for example 2.0.0.1), and the subnet must be 255.0.0.0.
