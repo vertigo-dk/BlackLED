@@ -225,9 +225,6 @@ void saveConfig() {
 char line[200];
 
 void setup() {
-  // Serial.begin(115200);
-  delay(2000);
-  // Serial.println("fw_teensy3.1");
   //saveConfig(); //<-- uncomment to force the EEPROM config to your settings on eatch reboot
   ArtConfig tempConfig = config;  // save the Firmeware state
   loadConfig();
@@ -249,7 +246,6 @@ void setup() {
   delay(200);
   // Read MAC address
   uint64_t mac_addr = teensyMAC();
-  // Serial.printf("%x\n", mac_addr);
 
   config.mac[0] = (mac_addr >> 8*5) & 0xFF;
   config.mac[1] = (mac_addr >> 8*4) & 0xFF;
@@ -300,7 +296,6 @@ void loop() {
       ArtHeader* header = (ArtHeader*)udp_buffer;
       // Check packet ID
       if (memcmp(header->ID, "Art-Net", 8) == 0) {  //is Art-Net
-        // Serial.println("Art-Net");
         // Read the rest of the packet
         udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
         // Package Op-Code determines type of packet
@@ -308,10 +303,6 @@ void loop() {
 
           // Poll packet
           case OpPoll: {
-            // Serial.println("poll");
-              //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
-              //if(poll->TalkToMe & 0x2){
-
               #ifdef blackOnOpPollTimeOut
                 lastPoll = millis();
               #endif
@@ -407,33 +398,24 @@ void loop() {
               loadConfig();
               node.createPollReply();
               artnetSend(udp_buffer, sizeof(ArtPollReply));
-              //node.createExtendedPollReply();
-              //artnetSend(udp_buffer, node.sizeOfExtendedPollReply());
               break;
             }
           case OpFirmwareMaster: {
-            // Serial.println("OpFirmwareMaster");
             if (firmware_update_in_progress == false) {
               int ret  = FirmwareFlasher.prepare_flash();
               if (ret == 0) {
                 firmware_update_in_progress = true;
-                // Serial.println("GOOD");
                 udp.stop();
                 udp.begin(8050);
               }else {
-                // Serial.print("BAD  ");
-                // Serial.println(ret);
-                // Serial.print("\n RESTART \n");
                 delay(1000);
                 CPU_RESTART;
               }
             }else {
-              // Serial.print("\n RESTART \n");
               CPU_RESTART;
             }
             break;
             }
-
           // Unhandled packet
           default: {
               break;
@@ -508,9 +490,7 @@ void loop() {
             for (int i = 0; i < m; i++) {
               if (udp_buffer[i] == '\n') {
                 line[i] = 0;
-                // Serial.printf(" EOL\n" );
                 if (FirmwareFlasher.flash_hex_line(line) != 0) {
-                  // Serial.printf("error\n");
                 }else {
                   udp.beginPacket(udp.remoteIP(), udp.remotePort());
                   udp.write(10);
@@ -518,7 +498,6 @@ void loop() {
                 }
               }else {
                 line[i] = udp_buffer[i];
-                // Serial.printf("%c", line[i]);
               }
             }
           }
@@ -526,7 +505,6 @@ void loop() {
       }
       delay(1);
     }
-      // Serial.print("\n RESTART \n");
     CPU_RESTART;
   }
 }
