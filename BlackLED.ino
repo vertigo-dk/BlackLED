@@ -311,7 +311,7 @@ void loop() {
               tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
 
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;options;%d", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               break;
@@ -437,22 +437,6 @@ void loop() {
         }
       }
     }
-  }
-
-  if (options & internalSyncFlag && currentMillis - previousMillis > internalFps) {
-    LEDS.show();
-    // calculate framerate
-    currentMillis = millis();
-    if(currentMillis > previousMillis){
-      fps = 1 / ((currentMillis - previousMillis) * 0.001);
-    } else {
-      fps = 0;
-    }
-    previousMillis = currentMillis;
-
-    // calculate average universes Updated
-    avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
-    numUniUpdated = 0;
   }
 
   #ifdef blackOnOpSyncTimeOut
