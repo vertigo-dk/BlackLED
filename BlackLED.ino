@@ -3,6 +3,8 @@
 // initial user defined settings
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#define BUILD 3
+
 #define NUM_OF_OUTPUTS 6
 #define MAX_NUM_LED_PER_OUTPUT 360
 #define NUM_CHANNEL_PER_LED 4 // do not change this
@@ -311,7 +313,7 @@ void loop() {
               tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
 
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;build;%d", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated, BUILD);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               break;
