@@ -2,7 +2,7 @@
 //
 // initial user defined settings
 //
-#define BUILD 4
+#define BUILD 12
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define NUM_OF_OUTPUTS 6
@@ -151,17 +151,32 @@ void artnetSend(byte* buffer, int length) {
 // Blink test all the leds full white
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void blink() {
+void allWhite() {
   for (int i = 0; i < 8 * num_led_per_output; i++) {
     LEDS.setPixel(i, 0xFFFFFFFF); //set full white
   }
   LEDS.show();
-  delay(300);
+}
+
+void allBlack() {
   for (int i = 0; i <  8 * num_led_per_output; i++) {
     LEDS.setPixel(i, 0x00000000); //set 0
   }
   LEDS.show();
+}
+
+void locate() {
+  uint8_t val = map(sin(millis()/100), -1.0, 1.0, 0x00, 0xFF);
+  for (int i = 0; i < 8 * num_led_per_output; i++) {
+    LEDS.setPixel(i, val, val, val, val);
+  }
+  LEDS.show();
+}
+
+void blink() {
+  allWhite();
+  delay(300);
+  allBlack();
   delay(100);
 }
 
@@ -338,20 +353,22 @@ void loop() {
 
           // OpSync
           case OpSync: {
-              LEDS.show();
+              if (locateMode == false) {
+                LEDS.show();
 
-              // calculate framerate
-              currentMillis = millis();
-              if(currentMillis > previousMillis){
-                fps = 1 / ((currentMillis - previousMillis) * 0.001);
-              } else {
-                fps = 0;
+                // calculate framerate
+                currentMillis = millis();
+                if(currentMillis > previousMillis){
+                  fps = 1 / ((currentMillis - previousMillis) * 0.001);
+                } else {
+                  fps = 0;
+                }
+                previousMillis = currentMillis;
+
+                // calculate average universes Updated
+                avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
+                numUniUpdated = 0;
               }
-              previousMillis = currentMillis;
-
-              // calculate average universes Updated
-              avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
-              numUniUpdated = 0;
 
               break;
             }
@@ -393,6 +410,7 @@ void loop() {
               if (address->Command == 0x04) {
                 locateMode = true;
               } else {
+                allBlack();
                 locateMode = false;
               }
               node = ArtNodeExtended(config, sizeof(udp_buffer), udp_buffer);
@@ -440,7 +458,9 @@ void loop() {
       }
     }
   }
-
+  if (locateMode == true) {
+    locate();
+  }
   #ifdef blackOnOpSyncTimeOut
     currentMillis = millis();
     if (currentMillis - lastSync > OpSyncTimeOut) {
