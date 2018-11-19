@@ -12,10 +12,11 @@ The code in this repository is available under the MIT License.
   2. Install [Teensyduino (1.41 or newer)](https://www.pjrc.com/teensy/td_download.html)
   3. Install [ArtNode lib](https://github.com/alex-Arc/ArtNode/tree/firmware)
   4. Install modified [OctoWS2811 lib](https://github.com/alex-Arc/OctoWS2811/tree/RGBW)
-  5. Install [Ethernet lib](https://github.com/PaulStoffregen/Ethernet) and set the ```MAX_SOCK_NUM``` to 1 and uncomment ```ETHERNET_LARGE_BUFFERS```
-  6. Open Arduino IDE
-  7. In ```Tools -> Board``` select ```Teensy 3.1/3.2```
-  8. In ```Tools -> CPU speed``` select 120 MHz(overclock)
+  5. Install [FirmwareFlasher](https://github.com/alex-Arc/FirmwareFlasher/tree/flash_from_udp)
+  6. Install [Ethernet lib](https://github.com/PaulStoffregen/Ethernet) and set the ```MAX_SOCK_NUM``` to 1 and uncomment ```ETHERNET_LARGE_BUFFERS```
+  7. Open Arduino IDE
+  8. In ```Tools -> Board``` select ```Teensy 3.1/3.2```
+  9. In ```Tools -> CPU speed``` select 120 MHz(overclock)
 
 ## Network setup
 The host computer has to be on the 2.x.x.x network (for example 2.0.0.1), and the subnet must be 255.0.0.0.
