@@ -70,6 +70,9 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #define PIN_RESET 24
 #else
 #define PIN_RESET 9
+#define PIN_POLL  23
+#define PIN_DMX   3
+#define PIN_SYNC  4
 #endif
 
 EthernetUDP udp;
@@ -260,6 +263,20 @@ void setup() {
   delay(150);
 #endif
 
+#ifdef PIN_DMX
+  pinMode(PIN_POLL, OUTPUT);
+  pinMode(PIN_SYNC, OUTPUT);
+  pinMode(PIN_DMX, OUTPUT);
+  digitalWriteFast(PIN_POLL, HIGH);
+  digitalWriteFast(PIN_DMX, HIGH);
+  digitalWriteFast(PIN_SYNC, HIGH);
+  delay(500);
+  digitalWriteFast(PIN_POLL, LOW);
+  digitalWriteFast(PIN_DMX, LOW);
+  digitalWriteFast(PIN_SYNC, LOW);
+#endif
+
+
   delay(200);
   // Read MAC address
   uint64_t mac_addr = teensyMAC();
@@ -320,6 +337,7 @@ void loop() {
 
           // Poll packet
           case OpPoll: {
+              digitalWriteFast(PIN_POLL, HIGH);
               #ifdef blackOnOpPollTimeOut
                 lastPoll = millis();
               #endif
@@ -331,11 +349,13 @@ void loop() {
               sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;build;%d", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated, BUILD);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
+              digitalWriteFast(PIN_POLL, LOW);
               break;
             }
 
           // DMX packet
           case OpDmx: {
+              digitalWriteFast(PIN_DMX, HIGH);
               ArtDmx* dmx = (ArtDmx*)udp_buffer;
               int port = node.getAddress(dmx->SubUni, dmx->Net) - node.getStartAddress();
               if (port >= 0 && port < config.numPorts) {
@@ -348,11 +368,13 @@ void loop() {
                 }
                 numUniUpdated++;
               }
+              digitalWriteFast(PIN_DMX, LOW);
               break;
             }
 
           // OpSync
           case OpSync: {
+              digitalWriteFast(PIN_SYNC, HIGH);
               if (locateMode == false) {
                 LEDS.show();
 
@@ -369,7 +391,7 @@ void loop() {
                 avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
                 numUniUpdated = 0;
               }
-
+              digitalWriteFast(PIN_SYNC, LOW);
               break;
             }
 
