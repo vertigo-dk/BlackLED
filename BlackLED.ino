@@ -25,9 +25,7 @@ const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
 
 const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
 
-const int num_led_per_output = num_universes_per_output*512/NUM_CHANNEL_PER_LED;
-
-const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
+const int num_led_per_output = MAX_NUM_LED_PER_OUTPUT;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -123,7 +121,7 @@ ArtConfig config = {
   0, 0,                                 // Net (0-127) and subnet (0-15)
   "BlackLED_6",                           // Short name
   "BlackLED_6_port",                     // Long name
-  num_artnet_ports, // Number of ports
+  5, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
