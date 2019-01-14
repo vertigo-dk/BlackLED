@@ -2,7 +2,7 @@
 //
 // initial user defined settings
 //
-#define BUILD 12
+#define BUILD 13
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define NUM_OF_OUTPUTS 4
@@ -119,8 +119,8 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "BlackLED_6",                           // Short name
-  "BlackLED_6_port",                     // Long name
+  "QuadLED",                           // Short name
+  "QuadLED",                     // Long name
   5, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
@@ -154,9 +154,22 @@ void artnetSend(byte* buffer, int length) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void allWhite() {
   for (int i = 0; i < 8 * num_led_per_output; i++) {
-    LEDS.setPixel(i, 0xFFFFFFFF); //set full white
+    LEDS.setPixel(i, 0xFF000000); //set full white
   }
   LEDS.show();
+  delay(500);for (int i = 0; i < 8 * num_led_per_output; i++) {
+    LEDS.setPixel(i, 0x00FF0000); //set full white
+  }
+  LEDS.show();
+  delay(500);for (int i = 0; i < 8 * num_led_per_output; i++) {
+    LEDS.setPixel(i, 0x0000FF00); //set full white
+  }
+  LEDS.show();
+  delay(500);for (int i = 0; i < 8 * num_led_per_output; i++) {
+    LEDS.setPixel(i, 0x000000FF); //set full white
+  }
+  LEDS.show();
+  delay(500);
 }
 
 void allBlack() {
