@@ -2,7 +2,7 @@
 //
 // initial user defined settings
 //
-#define BUILD 13
+#define BUILD 15
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define NUM_OF_OUTPUTS 4
@@ -23,7 +23,7 @@ const uint16_t internalFps = 1000; //in ms (1000ms = 44Hz)
 
 const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
 
-const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
+const float num_universes_per_output = num_channel_per_output/512.0;
 
 const int num_led_per_output = MAX_NUM_LED_PER_OUTPUT;
 
@@ -62,7 +62,7 @@ const int num_led_per_output = MAX_NUM_LED_PER_OUTPUT;
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define VERSION_HI 0
-#define VERSION_LO 10
+#define VERSION_LO 11
 
 #if defined(__MK66FX1M0__)
 #define PIN_RESET 24
@@ -90,6 +90,7 @@ uint32_t lastPoll = 0;
 uint32_t lastSync = 0;
 
 bool firmware_update_in_progress = false;
+IPAddress firmware_master(2,0,0,1);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -354,10 +355,11 @@ void loop() {
               #endif
 
               // read temperature value
-              tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
-              float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
+              // tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
+              // float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
+              // temp;%.1f;
 
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;build;%d", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated, BUILD);
+              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%f;fps;%.1f;uUniPF;%.1f;build;%d", NUM_OF_OUTPUTS, num_universes_per_output, fps, avgUniUpdated, BUILD);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               digitalWriteFast(PIN_POLL, LOW);
@@ -458,6 +460,7 @@ void loop() {
               int ret  = FirmwareFlasher.prepare_flash();
               if (ret == 0) {
                 firmware_update_in_progress = true;
+                firmware_master = udp.remoteIP();
                 udp.stop();
                 udp.begin(8050);
               }else {
@@ -515,7 +518,7 @@ void loop() {
   #endif
 
   if (firmware_update_in_progress == true) {
-    udp.beginPacket(IPAddress(2,0,0,1), 8050);
+    udp.beginPacket(firmware_master, 8050);
     udp.write(10);
     udp.endPacket();
 
