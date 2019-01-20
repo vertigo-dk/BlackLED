@@ -2,7 +2,7 @@
 //
 // initial user defined settings
 //
-#define BUILD 12
+#define BUILD 13
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define NUM_OF_OUTPUTS 6
@@ -92,6 +92,7 @@ uint32_t lastPoll = 0;
 uint32_t lastSync = 0;
 
 bool firmware_update_in_progress = false;
+IPAddress firmware_master(2,0,0,1);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -447,6 +448,7 @@ void loop() {
               int ret  = FirmwareFlasher.prepare_flash();
               if (ret == 0) {
                 firmware_update_in_progress = true;
+                firmware_master = udp.remoteIP();
                 udp.stop();
                 udp.begin(8050);
               }else {
@@ -504,7 +506,7 @@ void loop() {
   #endif
 
   if (firmware_update_in_progress == true) {
-    udp.beginPacket(IPAddress(2,0,0,1), 8050);
+    udp.beginPacket(firmware_master, 8050);
     udp.write(10);
     udp.endPacket();
 
