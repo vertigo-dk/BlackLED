@@ -42,7 +42,7 @@ const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
 #include <TeensyMAC.h>
 #include <EEPROM.h>
 
-#include <FirmwareFlasher.h>
+// #include <FirmwareFlasher.h>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -421,25 +421,7 @@ void loop() {
               break;
             }
           case OpFirmwareMaster: {
-            // Serial.println("OpFirmwareMaster");
-            if (firmware_update_in_progress == false) {
-              int ret  = FirmwareFlasher.prepare_flash();
-              if (ret == 0) {
-                firmware_update_in_progress = true;
-                // Serial.println("GOOD");
-                udp.stop();
-                udp.begin(8050);
-              }else {
-                // Serial.print("BAD  ");
-                // Serial.println(ret);
-                // Serial.print("\n RESTART \n");
-                delay(1000);
-                CPU_RESTART;
-              }
-            }else {
-              Serial.print("\n RESTART \n");
               CPU_RESTART;
-            }
             break;
             }
 
@@ -491,42 +473,4 @@ void loop() {
       LEDS.show();
     }
   #endif
-
-  if (firmware_update_in_progress == true) {
-    // Serial.print("whating for firmware");
-    udp.beginPacket(IPAddress(2,0,0,1), 8050);
-    udp.write(10);
-    udp.endPacket();
-
-    for (int i = 0; i < 200000; i++) {
-      while (udp.parsePacket()) {
-        unsigned int n = udp.read(udp_buffer, 15);
-        if (n >= 15) {
-          if (memcmp(udp_buffer, "firmware_line__", 15) == 0) {
-            unsigned int m = udp.read(udp_buffer, 400);
-            // Serial.printf("length_%d\n", m);
-            for (int i = 0; i < m; i++) {
-              if (udp_buffer[i] == '\n') {
-                line[i] = 0;
-                // Serial.printf(" EOL\n" );
-                if (FirmwareFlasher.flash_hex_line(line) != 0) {
-                  // Serial.printf("error\n");
-                }else {
-                  udp.beginPacket(udp.remoteIP(), udp.remotePort());
-                  udp.write(10);
-                  udp.endPacket();
-                }
-              }else {
-                line[i] = udp_buffer[i];
-                // Serial.printf("%c", line[i]);
-              }
-            }
-          }
-        }
-      }
-      delay(1);
-    }
-      // Serial.print("\n RESTART \n");
-    CPU_RESTART;
-  }
 }
