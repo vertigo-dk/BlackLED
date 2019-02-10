@@ -304,14 +304,14 @@ void setup() {
 
 void loop() {
   while (udp.parsePacket()) {
-    Serial.println("udp");
+    // Serial.println("udp");
     // First read the header to make sure it's Art-Net
     unsigned int n = udp.read(udp_buffer, sizeof(ArtHeader));
     if (n >= sizeof(ArtHeader)) {
       ArtHeader* header = (ArtHeader*)udp_buffer;
       // Check packet ID
       if (memcmp(header->ID, "Art-Net", 8) == 0) {  //is Art-Net
-        Serial.println("Art-Net");
+        // Serial.println("Art-Net");
         // Read the rest of the packet
         udp.read(udp_buffer + sizeof(ArtHeader), udp.available());
         // Package Op-Code determines type of packet
@@ -319,7 +319,7 @@ void loop() {
 
           // Poll packet
           case OpPoll: {
-            Serial.println("poll");
+            // Serial.println("poll");
               //T_ArtPoll* poll = (T_ArtPoll*)udp_buffer;
               //if(poll->TalkToMe & 0x2){
 
@@ -421,18 +421,18 @@ void loop() {
               break;
             }
           case OpFirmwareMaster: {
-            Serial.println("OpFirmwareMaster");
+            // Serial.println("OpFirmwareMaster");
             if (firmware_update_in_progress == false) {
               int ret  = FirmwareFlasher.prepare_flash();
               if (ret == 0) {
                 firmware_update_in_progress = true;
-                Serial.println("GOOD");
+                // Serial.println("GOOD");
                 udp.stop();
                 udp.begin(8050);
               }else {
-                Serial.print("BAD  ");
-                Serial.println(ret);
-                Serial.print("\n RESTART \n");
+                // Serial.print("BAD  ");
+                // Serial.println(ret);
+                // Serial.print("\n RESTART \n");
                 delay(1000);
                 CPU_RESTART;
               }
@@ -461,25 +461,6 @@ void loop() {
               break;
             }
         }
-      }else if(memcmp(header->ID, "MadrixN", 8) == 0){
-        LEDS.show();
-
-        #ifdef blackOnOpSyncTimeOut
-          lastSync = millis();
-        #endif
-
-        // calculate framerate
-        currentMillis = millis();
-        if(currentMillis > previousMillis){
-          fps = 1 / ((currentMillis - previousMillis) * 0.001);
-        } else {
-          fps = 0;
-        }
-        previousMillis = currentMillis;
-
-        // calculate average universes Updated
-        avgUniUpdated = numUniUpdated * 0.16 + avgUniUpdated * 0.84;
-        numUniUpdated = 0;
       }
     }
   }
@@ -490,7 +471,7 @@ void loop() {
   #else
   tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
   #endif
-  
+
   #ifdef blackOnOpSyncTimeOut
     currentMillis = millis();
     if (currentMillis - lastSync > OpSyncTimeOut) {
@@ -512,7 +493,7 @@ void loop() {
   #endif
 
   if (firmware_update_in_progress == true) {
-    Serial.print("whating for firmware");
+    // Serial.print("whating for firmware");
     udp.beginPacket(IPAddress(2,0,0,1), 8050);
     udp.write(10);
     udp.endPacket();
@@ -523,13 +504,13 @@ void loop() {
         if (n >= 15) {
           if (memcmp(udp_buffer, "firmware_line__", 15) == 0) {
             unsigned int m = udp.read(udp_buffer, 400);
-            Serial.printf("length_%d\n", m);
+            // Serial.printf("length_%d\n", m);
             for (int i = 0; i < m; i++) {
               if (udp_buffer[i] == '\n') {
                 line[i] = 0;
-                Serial.printf(" EOL\n" );
+                // Serial.printf(" EOL\n" );
                 if (FirmwareFlasher.flash_hex_line(line) != 0) {
-                  Serial.printf("error\n");
+                  // Serial.printf("error\n");
                 }else {
                   udp.beginPacket(udp.remoteIP(), udp.remotePort());
                   udp.write(10);
@@ -537,7 +518,7 @@ void loop() {
                 }
               }else {
                 line[i] = udp_buffer[i];
-                Serial.printf("%c", line[i]);
+                // Serial.printf("%c", line[i]);
               }
             }
           }
@@ -545,7 +526,7 @@ void loop() {
       }
       delay(1);
     }
-      Serial.print("\n RESTART \n");
+      // Serial.print("\n RESTART \n");
     CPU_RESTART;
   }
 }
