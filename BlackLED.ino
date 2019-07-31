@@ -2,11 +2,11 @@
 //
 // initial user defined settings
 //
-#define BUILD 1
+#define BUILD 4
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define NUM_OF_OUTPUTS 3
-#define MAX_NUM_LED_PER_OUTPUT 640
+#define MAX_NUM_LED_PER_OUTPUT 576‬
 #define NUM_CHANNEL_PER_LED 4 // do not change this
 
 //#define blackOnOpSyncTimeOut //recoment more than 20000 ms
@@ -21,13 +21,13 @@ const uint16_t internalFps = 1000; //in ms (1000ms = 44Hz)
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
+// const int num_channel_per_output = MAX_NUM_LED_PER_OUTPUT * NUM_CHANNEL_PER_LED;
 
-const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
+// const int num_universes_per_output = (num_channel_per_output%512) ? num_channel_per_output/512+1 : num_channel_per_output/512;
 
-const int num_led_per_output = num_universes_per_output*512/NUM_CHANNEL_PER_LED;
+const int num_led_per_output = 576; //num_universes_per_output*512/NUM_CHANNEL_PER_LED;
 
-const int num_artnet_ports = num_universes_per_output*NUM_OF_OUTPUTS;
+const int num_artnet_ports = 14; //num_universes_per_output*NUM_OF_OUTPUTS;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -122,9 +122,7 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
-  "BlackLED_6",                           // Short name
-  "BlackLED_6_port",                     // Long name
-  num_artnet_ports, // Number of ports
+  "BlackLED_3_port",                     // Long name
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
@@ -347,7 +345,7 @@ void loop() {
               tempVal = analogRead(38) * 0.01 + tempVal * 0.99;
               float tempCelsius = 25.0 + 0.17083 * (2454.19 - tempVal);
 
-              sprintf(node.pollReport, "numOuts;%d;numUniPOut;%d;temp;%.1f;fps;%.1f;uUniPF;%.1f;build;%d", NUM_OF_OUTPUTS, num_universes_per_output, tempCelsius, fps, avgUniUpdated, BUILD);
+              sprintf(node.pollReport, "numOuts;3;numUniPOut;4.5;temp;%.1f;fps;%.1f;uUniPF;%.1f;build;%d", tempCelsius, fps, avgUniUpdated, BUILD);
               node.createPollReply(); //create pollReply
               artnetSend(udp_buffer, sizeof(ArtPollReply)); //send pollReply
               digitalWriteFast(PIN_POLL, LOW);
