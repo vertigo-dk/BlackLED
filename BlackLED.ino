@@ -2,7 +2,7 @@
 //
 // initial user defined settings
 //
-#define BUILD 4
+#define BUILD 5
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define NUM_OF_OUTPUTS 3
@@ -122,7 +122,9 @@ ArtConfig config = {
 
   // These fields get overwritten by loadConfig:
   0, 0,                                 // Net (0-127) and subnet (0-15)
+  "BlackLED_3",                     // Shot name
   "BlackLED_3_port",                     // Long name
+  num_artnet_ports, // Number of ports
   { PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
     PortTypeDmx | PortTypeOutput,
